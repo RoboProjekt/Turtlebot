@@ -13,7 +13,9 @@ class VoiceControlNode(Node):
         super().__init__('voice_control_node')
         self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
-        model_path = "/mnt/c/Users/andya/Desktop/vosk-model-small-de-0.15"
+#Dateipfad angeben in dem vosk-model-small-de-0.15 gespeichert ist
+        model_path = "<Datei/Pfrad/zu>/vosk-model-small-de-0.15"
+        
         self.get_logger().info(f"Lade Vosk-Modell von: {model_path}")
         self.model = vosk.Model(model_path)
 
@@ -62,7 +64,7 @@ class VoiceControlNode(Node):
             self.twist.angular.z = 0.2
         elif "rechts" in text:
             self.twist.angular.z = -0.2
-        elif "halt" in text or "halt" in text:
+        elif "halt" in text:
             # Keine Bewegung
             pass
         else:
