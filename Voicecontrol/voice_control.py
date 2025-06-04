@@ -15,7 +15,7 @@ class VoiceControlNode(Node):
 
 #Dateipfad angeben in dem vosk-model-small-de-0.15 gespeichert ist
         model_path = "<Datei/Pfrad/zu>/vosk-model-small-de-0.15"
-        
+
         self.get_logger().info(f"Lade Vosk-Modell von: {model_path}")
         self.model = vosk.Model(model_path)
 
@@ -63,6 +63,9 @@ class VoiceControlNode(Node):
         elif "links" in text:
             self.twist.angular.z = 0.2
         elif "rechts" in text:
+            self.twist.angular.z = -0.2
+        elif "kreis" in text:
+            self.twist.linear.x = 0.2
             self.twist.angular.z = -0.2
         elif "halt" in text:
             # Keine Bewegung
