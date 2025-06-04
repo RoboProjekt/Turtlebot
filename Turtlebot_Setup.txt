@@ -1,0 +1,281 @@
+		ANLEITUNG ZUM ERSTELLEN VON ROS AUF EINEM TURTLEBOT3 (RASPBERRY PI3)
+
+	-Ubuntu Server 22.04.5 LTS x64 mit 'rpi-imager' auf SD Karte schreiben
+	-SD Karte in Pi und booten lassen
+	
+	-Verbinden mit: 'ssh pi@ip.adresse' (unser Fall 192.168.1.116)
+	-Ubuntu updaten: 'sudo apt update' 'sudo apt upgrade'
+	
+	-Swap Installieren: 'sudo apt-get install dphys-swapfile' 
+	-Swap stoppen: 'sudo swapoff -a'
+	-Swap Einrichten: 'sudo nano /etc/dphys-swapfile' 
+			  Sieht in etwa so aus: 
+				# /etc/dphys-swapfile - Configuration file for dphys-swapfile
+				# See /usr/share/dphys-swapfile/dphys-swapfile for full info.
+	
+				# the location of the swapfile, default is /var/swap
+				CONF_SWAPFILE=/var/swap
+	
+				# set size to 1024 MB (1 GB)
+				CONF_SWAPSIZE=1024 (unser Wert: 3000)
+	
+				# set size limit (if needed), 0 means no limit
+				CONF_MAXSWAP=2048 (unser Wert: 5000 oder 0)
+	
+				# if you want to use a fixed size instead of dynamic, set this to 1	
+				CONF_SWAPFACTOR=2 (unser Wert: 1)
+	
+				# enable/disable swapfile (1 = enable, 0 = disable)
+				CONF_ENABLE=1
+	
+	-Swap starten: 'sudo swapon -a'
+	
+	-Ros Installieren: 
+		--sudo apt install software-properties-common curl gnupg2 -y
+		--sudo add-apt-repository universe
+		--sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \-o /usr/share/keyrings/ros-archive-keyring.gpg
+		--echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" \ | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+		--sudo apt update
+		--sudo apt upgrade
+		
+		--sudo apt install ros-humble-ros-base -y 
+		ODER
+		--sudo apt install ros-humble-desktop (einschließlich Rviz, TurtleSim, Navigation2, Demo-Nodes und vielem mehr)
+		
+	-Sourcen von ROS2: 'nano ~/.bashrc' und 'source /opt/ros/humble/setup.bash' am Ende einfügen. mit strg+O speichern und mit strg+x schließen
+	
+	TurtleBot3 Burger einrichten:
+		--sudo apt install python3-argcomplete python3-colcon-common-extensions build-essential libboost-system-dev libudev-dev -y
+		--sudo apt install ros-humble-hls-lfcd-lds-driver ros-humble-dynamixel-sdk ros-humble-turtlebot3-msgs -y
+		--mkdir -p ~/turtlebot3_ws/src && cd ~/turtlebot3_ws/src
+		--git clone -b humble https://github.com/ROBOTIS-GIT/turtlebot3.git
+		--git clone -b humble https://github.com/ROBOTIS-GIT/ld08_driver.git
+		
+	-eventuell nochmal 'source ~/.bashrc'
+	
+		--colcon build --symlink-install 
+		ODER
+		--colcon build	
+		
+		
+----------------stand (21.05.2025 16:09)(Turtlebot3 Burger mit... pdf Seite2. Punkt 7)----------
+		
+		
+	OPENCR INSTALLATION
+	-sudo dpkg --add-architecture armhf
+	-sudo apt-get update
+	-sudo apt-get install libc6:armhf
+	-export OPENCR_PORT=/dev/ttyACM0
+	-export OPENCR_MODEL=burger
+	-rm -rf ./opencr_update.tar.bz2
+	-wget https://github.com/ROBOTIS-GIT/OpenCR-Binaries/raw/master/turtlebot3/ROS2/latest/opencr_update.tar.bz2
+	-tar -xvf opencr_update.tar.bz2
+	-cd ./opencr_update
+	-./update.sh $OPENCR_PORT $OPENCR_MODEL.opencr
+	
+	TURTLEBOT BRINGUP/START
+	-ssh pi@ip-adresse
+	-export TURTLEBOT3_MODEL=burger
+	-ros2 launch turtlebot3_bringup robot.launch.py
+	
+	KEYBOARD GESTEUERTE NUTZUNG
+	Neues Terminal mit ssh:
+	-export TURTLEBOT3_MODEL=burger
+	-ros2 run turtlebot3_teleop teleop_keyboard
+	
+	KARTOGRAFIEREN MIT RVIZ AUF PC
+	auf Pi: 'export TURTLEBOT3_MODEL=burger' danach 'ros2 launch turtlebot3_bringup robot.launch.py'
+	auf PC: 'export TURTLEBOT3_MODEL=burger' danach 'ros2 launch turtlebot3_cartographer cartographer.launch.py'	
+	
+	SENDEN VON ORDNERN AN TURTLEBOT MIT SSH
+	scp -r ~/mein/ordner pi@ip-adress:~/ziel/ordner/
+	(scp -r ~/Schreibtisch/Turtlebot_Setup.txt pi@192.168.1.116:~/)
+	
+	LIVESTREAM DURCH PI KAMERA
+	-sudo apt install mjpg-streamer
+	-cd ~/mjpg_streamer/src/mjpg-streamer/mjpg-streamer-experimental
+	./mjpg_streamer -i "./input_uvc.so -d /dev/video0 -r 640x480 -f 15" -o "./output_http.so -p 8080 -w ./www"
+	Auf PC/Browser: "pi.ip.adresse:8080" (bei uns: "192.168.1.116:8080")
+	
+	ROS2 KAMERA AKTIVIEREN
+	-sudo apt install libraspberrypi-bin v4l-utils ros-humble-v4l2-camera
+	-sudo apt install ros-humble-image-transport-plugins
+	-groups Es sollte einen Ordner video geben
+	-sudo apt-get install raspi-config (Wenn noch nicht vorhanden)
+	-sudo raspi-config
+	--Interface Options (Legacy Camera enablen, SPI enablen, I2C enablen mit [TAB] auf finished wechseln)
+	-vcgencmd get_camera (supported=1 detected=1)
+	-tmux
+	In tmux session: (Wird unabhängig von SSH ausgeführt)
+	--ros2 run v4l2_camera v4l2_camera_node --ros-args
+	[strg + B] anschließend [C] für neues tmux fenster
+	--ros2 topic list Hier müsste dann auch /camera_info und /image_raw/... erscheinen
+	(tmux nach beenden der ssh mit 'tmux ls' und 'tmux attach -t 0' wieder öffnen)
+
+----------------stand (22.05.2025 17:09)--------------------------------------------------------
+	
+	
+	
+	
+	Git Anmeldedaten: 	E-Mail: baau1001@stud.hs-kl.de
+				PW: Mechatronischesprojekt_2025
+				Username: RoboProjekt
+				
+				
+				
+	SPRACHERKENNUNG
+	-ALLES AUF LAPTOP
+	-pip install vosk sounddevice
+	-Herunterladen von vosk-model-small-de-0.15
+	-Erstellen von voice_control.py:
+		import rclpy
+		from rclpy.node import Node
+		from geometry_msgs.msg import Twist
+	
+		import sounddevice as sd
+		import queue
+		import json
+		import vosk
+		import sys
+
+		class VoiceControlNode(Node):
+		    def __init__(self):
+		        super().__init__('voice_control_node')
+		        self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
+
+		        model_path = r"/home/basti/Schreibtisch/vosk-model-small-de-0.15"
+		        self.get_logger().info(f"Lade Vosk-Modell von: {model_path}")
+		        self.model = vosk.Model(model_path)
+	
+		        self.q = queue.Queue()
+		        self.twist = Twist()
+
+		        # Mikrofon-Gerät ID hier anpassen, oder None für Standard
+		        self.device_id = None
+
+		        self.stream = sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16',
+                                        channels=1, callback=self.audio_callback,
+                                        device=self.device_id)
+		        self.stream.start()
+
+		        self.rec = vosk.KaldiRecognizer(self.model, 16000)
+
+        		self.get_logger().info("Sprachsteuerung gestartet - sag: vorwärts, rückwärts, links, rechts, stopp")
+
+        		self.timer = self.create_timer(0.1, self.timer_callback)
+	
+		    def audio_callback(self, indata, frames, time, status):
+		        if status:
+		            self.get_logger().warn(f"Sounddevice Status: {status}")
+		        self.q.put(bytes(indata))
+
+		    def timer_callback(self):
+		        while not self.q.empty():
+		            data = self.q.get()
+		            if self.rec.AcceptWaveform(data):
+		                result = json.loads(self.rec.Result())
+		                text = result.get("text", "")
+		                if text:
+		                    self.get_logger().info(f"Erkannt: {text}")
+        		            self.handle_command(text)
+
+    		def handle_command(self, text):
+		        # Reset Bewegung
+		        self.twist.linear.x = 0.0
+		        self.twist.angular.z = 0.0
+
+		        if "vorwärts" in text:
+		            self.twist.linear.x = 0.2
+		        elif "rückwärts" in text:
+		            self.twist.linear.x = -0.2
+		        elif "links" in text:
+		            self.twist.angular.z = 0.5
+        		elif "rechts" in text:
+	       		     self.twist.angular.z = -0.5
+	       		 elif "halt" in text or "halt" in text:
+	       		     # Keine Bewegung
+		            pass
+		        else:
+		            # Unbekannter Befehl, nichts tun
+			    return
+
+		        self.pub.publish(self.twist)
+		        self.get_logger().info(f"Bewegung gesendet: linear.x={self.twist.linear.x}, angular.z={self.twist.angular.z}")
+
+		def main(args=None):
+		    rclpy.init(args=args)
+		    node = VoiceControlNode()
+		    try:
+		        rclpy.spin(node)
+		    except KeyboardInterrupt:
+		        pass
+		    finally:
+		        node.stream.stop()
+		        node.stream.close()
+		        node.destroy_node()
+       			rclpy.shutdown()
+
+		if __name__ == "__main__":
+		    main()
+	
+	
+	-Ende SPRACHERKENNUNG
+	-Zum Starten 'ros2 launch turtlebot3_bringup robot.launch.py' auf dem pi und 'python3 voice_control.py' im '~/Schreibtisch' Verzeichnis starten
+	
+	DARKNET UND YOLOv4-TINY
+	-sudo snap install cmake --classic
+	-sudo apt-get install build-essential git libopencv-dev cmake
+	-mkdir ~/src
+	-cd ~/src
+	-git clone https://github.com/hank-ai/darknet
+	-cd darknet
+	-mkdir build
+	-cd build
+	-cmake -DCMAKE_BUILD_TYPE=Release ..
+	-make -j4 package
+	-sudo dpkg -i darknet-4.0.51-Linux.deb
+	
+	
+	
+----------------stand (23.05.2025 16:00)--------------------------------------------------------
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
