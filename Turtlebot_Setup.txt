@@ -222,60 +222,41 @@
 	-Ende SPRACHERKENNUNG
 	-Zum Starten 'ros2 launch turtlebot3_bringup robot.launch.py' auf dem pi und 'python3 voice_control.py' im '~/Schreibtisch' Verzeichnis starten
 	
-	DARKNET UND YOLOv4-TINY
-	-sudo snap install cmake --classic
-	-sudo apt-get install build-essential git libopencv-dev cmake
-	-mkdir ~/src
-	-cd ~/src
-	-git clone https://github.com/hank-ai/darknet
-	-cd darknet
-	-mkdir build
-	-cd build
-	-cmake -DCMAKE_BUILD_TYPE=Release ..
-	-make -j4 package
-	-sudo dpkg -i darknet-4.0.51-Linux.deb
-	
-	
+
 	
 ----------------stand (23.05.2025 16:00)--------------------------------------------------------
 	
 	
+	EINFÜGEN AUTORACE CAMERA NODE (UND EIGENE)
+	(Auf Pi)
+	-cd ~/turtlebot3_ws/src/
+	-git clone https://github.com/ROBOTIS-GIT/turtlebot3_autorace.git
+	-cd ~/turtlebot3_ws && colcon build --symlink-install
+	-sudo apt install ros-humble-image-transport ros-humble-cv-bridge ros-humble-vision-opencv python3-opencv libopencv-dev ros-humble-image-pipeline
+	(-export TURTLEBOT3_MODEL=burger_cam)
+	LAUNCH:
+	 -ros2 launch turtlebot3_autorace_camera FILENAME
+	FILENAME in [~/turtlebot3_ws/install/turtlebot3_autorace_camera/share/turtlebot3_autorace_camera/launch] und [~/turtlebot3_ws/src/turtlebot3_autorace/turtlebot3_autorace_camera/launch \\hier nicht bootable aber sichtbar]
+	(bei uns ros2 launch turtlebot3_autorace_camera live_camera_launch.py)
+	EIGENE FILES IM GIT
 	
 	
+	DARKNET UND YOLOv4-TINY
+	DARKNET
+	-git clone https://github.com/AlexeyAB/darknet.git ~/darknet
+	-cd ~/darknet
+	-nano Makefile
+	--GPU=0
+          CUDNN=0
+          CUDNN_HALF=0
+          OPENCV=1
+         ([strg]+O, [strg]+X)
+        -make -j4
+        YOLOv4-TINY
+	-wget https://github.com/AlexeyAB/darknet/releases/download/yolov4/yolov4-tiny.weights
+	TO RUN:
+	-cd ~/darknet
+	-./darknet detector demo cfg/coco.data cfg/yolov4-tiny.cfg yolov4-tiny.weights -c 0
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+----------------stand (04.06.2025 14:43)--------------------------------------------------------
