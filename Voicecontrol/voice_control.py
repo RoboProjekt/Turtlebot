@@ -13,9 +13,7 @@ class VoiceControlNode(Node):
         super().__init__('voice_control_node')
         self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
-#Dateipfad angeben in dem vosk-model-small-de-0.15 gespeichert ist
-        model_path = "<Datei/Pfrad/zu>/vosk-model-small-de-0.15"
-
+        model_path = r"/home/basti/Schreibtisch/Turtlebot/vosk-model-small-de-0.15"
         self.get_logger().info(f"Lade Vosk-Modell von: {model_path}")
         self.model = vosk.Model(model_path)
 
@@ -23,7 +21,7 @@ class VoiceControlNode(Node):
         self.twist = Twist()
 
         # Mikrofon-Gerät ID hier anpassen, oder None für Standard
-        self.device_id = 1
+        self.device_id = None
 
         self.stream = sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16',
                                         channels=1, callback=self.audio_callback,
@@ -32,7 +30,7 @@ class VoiceControlNode(Node):
 
         self.rec = vosk.KaldiRecognizer(self.model, 16000)
 
-        self.get_logger().info("Sprachsteuerung gestartet - sag: vorwärts, rückwärts, links, rechts, halt")
+        self.get_logger().info("Sprachsteuerung gestartet - sag: vorwärts, rückwärts, links, rechts, stopp")
 
         self.timer = self.create_timer(0.1, self.timer_callback)
 
@@ -64,10 +62,10 @@ class VoiceControlNode(Node):
             self.twist.angular.z = 0.2
         elif "rechts" in text:
             self.twist.angular.z = -0.2
-        elif "kreis" in text:
-            self.twist.linear.x = 0.2
-            self.twist.angular.z = -0.2
-        elif "halt" in text:
+        elif "fahr im kreis" in text:
+            self.twist.linear.x = 0.1
+            self.twist.angular.z = -0.2  
+        elif "halt" in text or "halt" in text:
             # Keine Bewegung
             pass
         else:
