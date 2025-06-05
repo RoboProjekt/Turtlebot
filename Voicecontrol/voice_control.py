@@ -20,6 +20,7 @@ class VoiceControlNode(Node):
 
         # Pfad zum Vosk-Modell anpassen
         model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"
+
         self.model = vosk.Model(model_path)
 
         self.q = queue.Queue()
@@ -83,7 +84,7 @@ class VoiceControlNode(Node):
             self.twist.linear.x = 0.3
             self.twist.angular.z = -0.6
         elif "halt" in text:
-            self.get_logger().info("Anhalten")
+            self.get_logger().info(f"Hält an\nWarte auf neuen Sprachbefehl\n")
         else:
             return  # Unbekannter Befehl
 
@@ -94,12 +95,12 @@ class VoiceControlNode(Node):
     #Neuer Aufruf sobal neuer LIDAR Scan empfangen wurde
     def scan_callback(self, msg):
 
-        # Bereich in der Mitte (z. B. ±10°) auswerten
+        # Bereich in der Mitte wird beobachtet und ausgewertet (ca. ±10°) 
         center_index = len(msg.ranges) // 2
         window = msg.ranges[center_index - 10:center_index + 10]
 
         # Nur gültige Werte verwenden
-        # Rauschwellen um die 5cm werden nicht berücksichtigt
+        # Rauschwellen um die 0.05m werden nicht berücksichtigt
         valid_ranges = [r for r in window if np.isfinite(r) and r > 0.05]
         if not valid_ranges:
             return
@@ -109,12 +110,13 @@ class VoiceControlNode(Node):
         #Stoppen wenn Hindernis erkannt wurde, in vorgegebener Reichweite
         if min_distance < Abstand:
             if not self.obstacle_detected:
-                self.get_logger().warn(f"\n!!!!Hindernis in {min_distance:.2f} m erkannt – Hält sofort an!!!!\n")
+                self.get_logger().warn(f"\n\n!!!!Hindernis in {min_distance:.2f} m erkannt – Hält sofort an!!!!\n")
             self.obstacle_detected = True
 
             # Sofort stoppen bei Hinderniserkennung
             stop_twist = Twist()
             self.pub.publish(stop_twist)
+            return
         else:
             self.obstacle_detected = False
 
