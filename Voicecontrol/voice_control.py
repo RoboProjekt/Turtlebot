@@ -120,7 +120,8 @@ class VoiceControlNode(Node):
         else:
             self.obstacle_detected = False
 
-
+#-----------------------------------------------------------------------------------------------
+#--------------------Hauptprogramm--------------------
 def main(args=None):
     rclpy.init(args=args)
     node = VoiceControlNode()
