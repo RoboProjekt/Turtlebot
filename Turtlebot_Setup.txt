@@ -1,4 +1,12 @@
 		ANLEITUNG ZUM ERSTELLEN VON ROS AUF EINEM TURTLEBOT3 (RASPBERRY PI3)
+		
+		
+	
+	Git Anmeldedaten: 	E-Mail: baau1001@stud.hs-kl.de
+				PW: Mechatronischesprojekt_2025
+				Username: RoboProjekt
+				
+		
 
 	-Ubuntu Server 22.04.5 LTS x64 mit 'rpi-imager' auf SD Karte schreiben
 	-SD Karte in Pi und booten lassen
@@ -113,18 +121,13 @@
 	(tmux nach beenden der ssh mit 'tmux ls' und 'tmux attach -t 0' wieder öffnen)
 
 ----------------stand (22.05.2025 17:09)--------------------------------------------------------
-	
-	
-	
-	
-	Git Anmeldedaten: 	E-Mail: baau1001@stud.hs-kl.de
-				PW: Mechatronischesprojekt_2025
-				Username: RoboProjekt
-				
 				
 				
 	SPRACHERKENNUNG
-	-ALLES AUF LAPTOP
+	-AUF PI
+	--wget https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip
+	--unzip vosk-model-small-de-0.15.zip
+	-AUF LAPTOP
 	-pip install vosk sounddevice
 	-Herunterladen von vosk-model-small-de-0.15
 	-Erstellen von voice_control.py:
@@ -260,3 +263,24 @@
 	
 	
 ----------------stand (04.06.2025 14:43)--------------------------------------------------------
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
