@@ -265,6 +265,386 @@
 ----------------stand (04.06.2025 14:43)--------------------------------------------------------
 	
 	
+	KI FÜR TÜREN ANLERNEN
+	-download von roboflow yolo-aiv2 Computer Vision Project (https://universe.roboflow.com/yolo-ai-fubov/yolo-aiv2)
+	-installation über downloadlink (Download dataset, Format YOLO Darknet, Show download code, Terminal (Bei uns: curl -L "https://universe.roboflow.com/ds/DRBvdKiREx?key=hsMtANmbdg" > roboflow.zip; unzip roboflow.zip; rm roboflow.zip))
+	-installieren tiny weights:
+	--cd ~/darknet
+	--wget https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.conv.29
+	-Erstellen Ordner für Dataset:
+	-- ~/darknet/data: mkdir yolo-aiv2
+	-Kopieren des Dataset(Ordner 'train' und 'valid' nach ~/darknet/data/yolo-aiv2)
+	-Erstellen von Files in yolo-aiv2:
+	--nano obj.data:
+	classes = 30
+	train = data/yolo-aiv2/train.txt
+	valid = data/yolo-aiv2/valid.txt
+	names = data/yolo-aiv2/obj.names
+	backup = backup/
+	--nano obj.names:
+	7 segment
+	IC
+	ID
+	LCD
+	NI Elvis
+	PCB
+	Voltage Regulator
+	aircon
+	arduino
+	breadboard
+	button
+	capacitor	
+	ceiling fan
+	chassis	
+	door
+	keyboard
+	led
+	mobile phone
+	monitor
+	monoblock
+	mouse
+	multimeter
+	person
+	resistor
+	table
+	tie
+	transistor
+	trash bin
+	white board
+	wire
+	
+	--Erstellen von trrain.txt und valid.txt
+	find data/yolo-aiv2/train -name '*.jpg' | sort > data/yolo-aiv2/train.txt
+	find data/yolo-aiv2/valid -name '*.jpg' | sort > data/yolo-aiv2/valid.txt
+	
+	-Installieren CUDA (Laptop Grafikkarte Nvidia MX250)
+	sudo apt update
+	sudo apt install nvidia-cuda-toolkit
+	nvcc --version
+	(PC/Laptop Neustarten)
+	
+	-Anpassen Makefile (Kommentare Löschen)
+	~/darknet: nano Makefile 
+	GPU=1						//GPU aktivieren (Auf Pi alles zu GPU auf 0)
+	CUDNN=0						//Wenn GPU CUDNN fähig dann auf 1
+	CUDNN_HALF=0					//"
+	OPENCV=1
+	AVX=1
+	OPENMP=1
+	LIBSO=1
+	ZED_CAMERA=0
+	ZED_CAMERA_v2_8=0
+	...
+	-make clean
+	-make -j$(nproc)
+
+		
+	-Erstellen eigener config Datei:
+	~/darknet/cfg: nano yolov4-tiny-custom.cfg
+	--yolov4-tiny-custom.cfg (Kommentare Löschen):
+[net]
+# Testing
+#batch=1
+#subdivisions=1
+# Training
+batch=64		(Wie viele Bilder werden Verarbeitet (hier 64))
+subdivisions=32		(In wie vielen Prozessen werden diese Verarbeitet (hier 32) => 2Bilder pro durchlauf)
+width=416
+height=416
+channels=3
+momentum=0.9
+decay=0.0005
+angle=0
+saturation = 1.5
+exposure = 1.5
+hue=.1
+
+learning_rate=0.00261
+burn_in=1000
+
+max_batches = 2000200
+policy=steps
+steps=1600000,1800000
+scales=.1,.1
+
+
+#weights_reject_freq=1001
+#ema_alpha=0.9998
+#equidistant_point=1000
+#num_sigmas_reject_badlabels=3
+#badlabels_rejection_percentage=0.2
+
+
+[convolutional]
+batch_normalize=1
+filters=32
+size=3
+stride=2
+pad=1
+activation=leaky
+
+[convolutional]
+batch_normalize=1
+filters=64
+size=3
+stride=2
+pad=1
+activation=leaky
+
+[convolutional]
+batch_normalize=1
+filters=64
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers=-1
+groups=2
+group_id=1
+
+[convolutional]
+batch_normalize=1
+filters=32
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[convolutional]
+batch_normalize=1
+filters=32
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers = -1,-2
+
+[convolutional]
+batch_normalize=1
+filters=64
+size=1
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers = -6,-1
+
+[maxpool]
+size=2
+stride=2
+
+[convolutional]
+batch_normalize=1
+filters=128
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers=-1
+groups=2
+group_id=1
+
+[convolutional]
+batch_normalize=1
+filters=64
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[convolutional]
+batch_normalize=1
+filters=64
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers = -1,-2
+
+[convolutional]
+batch_normalize=1
+filters=128
+size=1
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers = -6,-1
+
+[maxpool]
+size=2
+stride=2
+
+[convolutional]
+batch_normalize=1
+filters=256
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers=-1
+groups=2
+group_id=1
+
+[convolutional]
+batch_normalize=1
+filters=128
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[convolutional]
+batch_normalize=1
+filters=128
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers = -1,-2
+
+[convolutional]
+batch_normalize=1
+filters=256
+size=1
+stride=1
+pad=1
+activation=leaky
+
+[route]
+layers = -6,-1
+
+[maxpool]
+size=2
+stride=2
+
+[convolutional]
+batch_normalize=1
+filters=512
+size=3
+stride=1
+pad=1
+activation=leaky
+
+##################################
+
+[convolutional]
+batch_normalize=1
+filters=256
+size=1
+stride=1
+pad=1
+activation=leaky
+
+[convolutional]
+batch_normalize=1
+filters=512
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[convolutional]
+size=1
+stride=1
+pad=1
+filters=105		([classes+5]*mask = [30+5]*3 = 35*3 = 105)
+activation=linear
+
+
+
+[yolo]
+mask = 3,4,5
+anchors = 10,14,  23,27,  37,58,  81,82,  135,169,  344,319
+classes=30							(Anzahl muss zu Liste in obj.names passen und in obj.data muss die selbe anzahl stehen)
+num=6
+jitter=.3
+scale_x_y = 1.05
+cls_normalizer=1.0
+iou_normalizer=0.07
+iou_loss=ciou
+ignore_thresh = .7
+truth_thresh = 1
+random=0
+resize=1.5
+nms_kind=greedynms
+beta_nms=0.6
+#new_coords=1
+#scale_x_y = 2.0
+
+[route]
+layers = -4
+
+[convolutional]
+batch_normalize=1
+filters=128
+size=1
+stride=1
+pad=1
+activation=leaky
+
+[upsample]
+stride=2
+
+[route]
+layers = -1, 23
+
+[convolutional]
+batch_normalize=1
+filters=256
+size=3
+stride=1
+pad=1
+activation=leaky
+
+[convolutional]
+size=1
+stride=1
+pad=1
+filters=105		([classes+5]*mask = [30+5]*3 = 35*3 = 105)
+activation=linear
+
+[yolo]
+mask=1,2,3
+anchors=10,14, 23,27, 37,58, 81,82, 135,169, 344,319
+classes=30							(Anzahl muss zu Liste in obj.names passen und in obj.data muss die selbe anzahl stehen)
+num=6
+jitter=.3
+scale_x_y = 1.05
+cls_normalizer=1.0
+iou_normalizer=0.07
+iou_loss=ciou
+ignore_thresh = .7
+truth_thresh = 1
+random=0
+resize=1.5
+nms_kind=greedynms
+beta_nms=0.6
+#new_coords=1
+#scale_x_y = 2.0
+
+
+	-Training starten: 
+	~/darknet: ./darknet detector train data/yolo-aiv2/obj.data cfg/yolov4-tiny-custom.cfg yolov4-tiny.conv.29 -map
+
+	
+----------------stand (05.06.2025 15:41)--------------------------------------------------------
+	
+	
 	
 	
 	
