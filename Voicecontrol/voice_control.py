@@ -3,6 +3,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan           # Für Hinderniserkennung
 from rclpy.qos import qos_profile_sensor_data
+from enum import Enum
 
 import sounddevice as sd
 import queue
@@ -11,6 +12,10 @@ import vosk
 import numpy as np
 
 Abstand = 0.3   # Abstand in Metern, bei dem ein Hindernis erkannt wird
+
+class Fahrtrichtung(Enum):
+    forward = 1
+    backword = 2
 
 # Erstellen der Node
 class VoiceControlNode(Node):
@@ -34,12 +39,14 @@ class VoiceControlNode(Node):
 
         self.rec = vosk.KaldiRecognizer(self.model, 16000)
 
-        self.get_logger().info("\n-----Sprachsteuerung gestartet-----\n Mögliche Befehle: vorwärts, rückwärts, halt, links, rechts, fahr im kreis\n")
+        self.get_logger().info("\n-----Sprachsteuerung gestartet-----\n Mögliche Befehle: vorwärts, zurück, halt, links, rechts, turn\n")
 
         self.timer = self.create_timer(0.1, self.timer_callback)
 
         # Hinderniserkennung
         self.obstacle_detected = False
+        self.detected_front = False
+        self.detected_back = False
         self.scan_sub = self.create_subscription(
             LaserScan,
             '/scan',
@@ -73,18 +80,20 @@ class VoiceControlNode(Node):
         self.twist.angular.z = 0.0
 
         if "vorwärts" in text:
-            self.twist.linear.x = 0.2
-        elif "rückwärts" in text:
-            self.twist.linear.x = -0.2
+            self.Fahrtrichtung = Fahrtrichtung.forward
+            self.twist.linear.x = 0.5
+        elif "zurück" in text:
+            self.Fahrtrichtung = Fahrtrichtung.backword
+            self.twist.linear.x = -0.5
         elif "links" in text:
             self.twist.angular.z = 0.2
         elif "rechts" in text:
             self.twist.angular.z = -0.2
-        elif "fahr im kreis" in text:
+        elif "turn" in text:
             self.twist.linear.x = 0.3
             self.twist.angular.z = -0.6
         elif "halt" in text:
-            self.get_logger().info(f"Hält an\nWarte auf neuen Sprachbefehl\n")
+            self.get_logger().info(f"Hält an\n-----Warte auf neuen Sprachbefehl-----\n")
         else:
             return  # Unbekannter Befehl
 
@@ -94,31 +103,53 @@ class VoiceControlNode(Node):
     #Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
     #Neuer Aufruf sobal neuer LIDAR Scan empfangen wurde
     def scan_callback(self, msg):
+       
+        Angle = 20                      # gescannter Winkel in Grad
+        num_ranges = len(msg.ranges)
 
-        # Bereich in der Mitte wird beobachtet und ausgewertet (ca. ±10°) 
-        center_index = len(msg.ranges) // 2
-        window = msg.ranges[center_index - 10:center_index + 10]
+        front_center = num_ranges   # Beobachtet bei 360 grad, sprich Vorne
+        window_front = msg.ranges[max(0, front_center - Angle):min(num_ranges, front_center + Angle)] # Beobachtet 360 - Angle : 359 + Angle Werte
 
-        # Nur gültige Werte verwenden
+        back_center = num_ranges // 2 # Beobachtet bei 360 grad/2 = 180 grad, sprich hinten
+        window_back = msg.ranges[max(0, back_center - Angle):min(num_ranges, back_center + Angle)]
+
+        # Nur gültige Werte verwenden, werden in valid_ranges gespeichert
         # Rauschwellen um die 0.05m werden nicht berücksichtigt
-        valid_ranges = [r for r in window if np.isfinite(r) and r > 0.05]
-        if not valid_ranges:
+        Frontwindow = list(window_front)
+        Backwindow = list(window_back)
+
+        valid_ranges_front = [r for r in Frontwindow if np.isfinite(r) and r > 0.05]        # Gültige Werte für Hindernisse auf der Vorderseite
+        valid_ranges_back = [r for r in Backwindow if np.isfinite(r) and r > 0.05]          # Gültige Werte für Hindernisse auf der Rückseite
+
+        if not valid_ranges_front or not valid_ranges_back: # Beenden falls keine gültigen Werte erkannt wurden
             return
 
-        min_distance = min(valid_ranges)
+        min_distance_front = min(valid_ranges_front)        # kleinste Distanz der gemessenen Werte
+        min_distance_back = min(valid_ranges_back)
 
-        #Stoppen wenn Hindernis erkannt wurde, in vorgegebener Reichweite
-        if min_distance < Abstand:
+    
+        # Stoppen wenn Hindernis erkannt wurde, sowohl hinten als auch vorne und kein Hindernis zuvor gemeldet wurde
+        if min_distance_front < Abstand:
+            self.detected_front = True
             if not self.obstacle_detected:
-                self.get_logger().warn(f"\n\n!!!!Hindernis in {min_distance:.2f} m erkannt – Hält sofort an!!!!\n")
-            self.obstacle_detected = True
-
-            # Sofort stoppen bei Hinderniserkennung
-            stop_twist = Twist()
-            self.pub.publish(stop_twist)
+                self.get_logger().warn(f"\n\n!!!!Hindernis Vorne erkannt in {min_distance_front:.2f} m – Hält sofort an!!!!\n")
+                self.obstacle_detected = True
+                stop_twist = Twist()
+                self.pub.publish(stop_twist)
+            return
+        elif min_distance_back < Abstand:
+            self.detected_back = True
+            if not self.obstacle_detected:
+                self.get_logger().warn(f"\n\n!!!!Hindernis Hinten erkannt in {min_distance_back:.2f} m – Hält sofort an!!!!\n")
+                self.obstacle_detected = True
+                stop_twist = Twist()
+                self.pub.publish(stop_twist)
             return
         else:
             self.obstacle_detected = False
+
+            
+
 
 
 def main(args=None):
