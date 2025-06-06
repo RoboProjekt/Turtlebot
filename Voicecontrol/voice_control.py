@@ -11,6 +11,10 @@ import json
 import vosk
 import numpy as np
 
+# Je nach dem wer den Code gerade testen will, ändert seinen Namen auf True und den anderen auf False für den richtigen Modelpfad
+Andy = True
+Bastian = False
+
 Abstand = 0.3   # Abstand in Metern, bei dem ein Hindernis erkannt wird
 
 class Hinderniserkennung(Enum):
@@ -30,7 +34,10 @@ class VoiceControlNode(Node):
         self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
         # Pfad zum Vosk-Modell anpassen
-        model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"
+        if Andy:
+         model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"            #modelpath Andy
+        if Bastian:
+         model_path = r"/home/basti/Schreibtisch/Turtlebot/vosk-model-de-0.15"                   #modelpath Bastian
 
         self.model = vosk.Model(model_path)
 
@@ -88,10 +95,10 @@ class VoiceControlNode(Node):
 
         if "vorwärts" in text:
             self.DirectionState = DirectionState.forward
-            self.twist.linear.x = 0.5
+            self.twist.linear.x = 0.2
         elif "zurück" in text:
             self.DirectionState = DirectionState.backward
-            self.twist.linear.x = -0.5
+            self.twist.linear.x = -0.2
         elif "links" in text:
             self.twist.angular.z = 0.2
         elif "rechts" in text:
@@ -130,23 +137,38 @@ class VoiceControlNode(Node):
         if not valid_ranges_front or not valid_ranges_back: # Beenden falls keine gültigen Werte erkannt wurden
             return
 
-        min_distance_front = min(valid_ranges_front)        # kleinste Distanz der gemessenen Werte
-        min_distance_back = min(valid_ranges_back)
+        min_distance_front = min(valid_ranges_front)        # kleinste Distanz der gemessenen Werte vorne
+        min_distance_back = min(valid_ranges_back)          # kleinste Distanz der gemessenen Werte hinten
 
     #Status umschalten nach Hinderniserkennung
         if min_distance_back <= Abstand:
-            self.Hindernisserkennung = Hinderniserkennung.back
-        elif min_distance_front <= Abstand:
-            self.Hindernisserkennung = Hinderniserkennung.front
-            
 
+            self.Hindernisserkennung = Hinderniserkennung.back
+
+        elif min_distance_front <= Abstand:
+
+            self.Hindernisserkennung = Hinderniserkennung.front
+
+        else:
+
+           if self.Hindernisserkennung != Hinderniserkennung.none:          # Umschalten auf Normalzustand
+               
+               self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
+               self.Hindernisserkennung = Hinderniserkennung.none
+               self.DirectionState = DirectionState.none
+               stopTwist = Twist()
+               self.pub.publish(stopTwist)
+
+               
+            
+    #Hindernis wurde erkannt und Roboter befand sich in der Bewegung
         if self.Hindernisserkennung == Hinderniserkennung.front and self.DirectionState == DirectionState.forward:
                 
                 stopTwist = Twist()
                 self.pub.publish(stopTwist)
                 self.get_logger().warn(f"\n\n!!!!Hindernis Vorne erkannt in {min_distance_front:.2f} m – Hält an!\n")
                 self.twist.linear.x = -0.2
-                self.get_logger().warn(f"\n\nRückwärts fahren bis kein Hindernis mehr im Weg\n")
+                self.get_logger().info("\n\nRückwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.pub.publish(self.twist)
 
         elif self.Hindernisserkennung == Hinderniserkennung.back and self.DirectionState == DirectionState.backward:
@@ -155,10 +177,10 @@ class VoiceControlNode(Node):
                 self.pub.publish(stopTwist)
                 self.get_logger().warn(f"\n\n!!!!Hindernis Hinten erkannt in {min_distance_back:.2f} m – Hält an!\n")
                 self.twist.linear.x = 0.2
-                self.get_logger().warn(f"\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
+                self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.pub.publish(self.twist)
 
-
+        
 def main(args=None):
     rclpy.init(args=args)
     node = VoiceControlNode()
