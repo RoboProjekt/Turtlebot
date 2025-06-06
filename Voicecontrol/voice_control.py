@@ -13,9 +13,15 @@ import numpy as np
 
 Abstand = 0.3   # Abstand in Metern, bei dem ein Hindernis erkannt wird
 
-class Fahrtrichtung(Enum):
+class Hinderniserkennung(Enum):
+    front = 1
+    back = 2
+    none = 3
+
+class DirectionState(Enum):
     forward = 1
-    backword = 2
+    backward = 2 
+    none = 3
 
 # Erstellen der Node
 class VoiceControlNode(Node):
@@ -27,6 +33,9 @@ class VoiceControlNode(Node):
         model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"
 
         self.model = vosk.Model(model_path)
+
+        self.Hindernisserkennung = Hinderniserkennung.none
+        self.DirectionState = DirectionState.none
 
         self.q = queue.Queue()
         self.twist = Twist()
@@ -45,8 +54,6 @@ class VoiceControlNode(Node):
 
         # Hinderniserkennung
         self.obstacle_detected = False
-        self.detected_front = False
-        self.detected_back = False
         self.scan_sub = self.create_subscription(
             LaserScan,
             '/scan',
@@ -71,19 +78,19 @@ class VoiceControlNode(Node):
                 text = result.get("text", "")
                 if text:
                     self.get_logger().info(f"Erkannt: {text}")
-                    self.handle_command(text)
+                    self.handle_movement_Command(text)
 #-----------------------------------------------------------------------------------------------
-    #Funktion um auf erhaltene Kommandos zu reagieren
-    def handle_command(self, text):
+    #Funktion zur Bewegungssteuerung des Roboters
+    def handle_movement_Command(self, text):
         # Bewegung zurücksetzen
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
 
         if "vorwärts" in text:
-            self.Fahrtrichtung = Fahrtrichtung.forward
+            self.DirectionState = DirectionState.forward
             self.twist.linear.x = 0.5
         elif "zurück" in text:
-            self.Fahrtrichtung = Fahrtrichtung.backword
+            self.DirectionState = DirectionState.backward
             self.twist.linear.x = -0.5
         elif "links" in text:
             self.twist.angular.z = 0.2
@@ -96,8 +103,7 @@ class VoiceControlNode(Node):
             self.get_logger().info(f"Hält an\n-----Warte auf neuen Sprachbefehl-----\n")
         else:
             return  # Unbekannter Befehl
-
-   
+        
         self.pub.publish(self.twist)
 #-----------------------------------------------------------------------------------------------
     #Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
@@ -127,29 +133,30 @@ class VoiceControlNode(Node):
         min_distance_front = min(valid_ranges_front)        # kleinste Distanz der gemessenen Werte
         min_distance_back = min(valid_ranges_back)
 
-    
-        # Stoppen wenn Hindernis erkannt wurde, sowohl hinten als auch vorne und kein Hindernis zuvor gemeldet wurde
-        if min_distance_front < Abstand:
-            self.detected_front = True
-            if not self.obstacle_detected:
-                self.get_logger().warn(f"\n\n!!!!Hindernis Vorne erkannt in {min_distance_front:.2f} m – Hält sofort an!!!!\n")
-                self.obstacle_detected = True
-                stop_twist = Twist()
-                self.pub.publish(stop_twist)
-            return
-        elif min_distance_back < Abstand:
-            self.detected_back = True
-            if not self.obstacle_detected:
-                self.get_logger().warn(f"\n\n!!!!Hindernis Hinten erkannt in {min_distance_back:.2f} m – Hält sofort an!!!!\n")
-                self.obstacle_detected = True
-                stop_twist = Twist()
-                self.pub.publish(stop_twist)
-            return
-        else:
-            self.obstacle_detected = False
-
+    #Status umschalten nach Hinderniserkennung
+        if min_distance_back <= Abstand:
+            self.Hindernisserkennung = Hinderniserkennung.back
+        elif min_distance_front <= Abstand:
+            self.Hindernisserkennung = Hinderniserkennung.front
             
 
+        if self.Hindernisserkennung == Hinderniserkennung.front and self.DirectionState == DirectionState.forward:
+                
+                stopTwist = Twist()
+                self.pub.publish(stopTwist)
+                self.get_logger().warn(f"\n\n!!!!Hindernis Vorne erkannt in {min_distance_front:.2f} m – Hält an!\n")
+                self.twist.linear.x = -0.2
+                self.get_logger().warn(f"\n\nRückwärts fahren bis kein Hindernis mehr im Weg\n")
+                self.pub.publish(self.twist)
+
+        elif self.Hindernisserkennung == Hinderniserkennung.back and self.DirectionState == DirectionState.backward:
+                
+                stopTwist= Twist()
+                self.pub.publish(stopTwist)
+                self.get_logger().warn(f"\n\n!!!!Hindernis Hinten erkannt in {min_distance_back:.2f} m – Hält an!\n")
+                self.twist.linear.x = 0.2
+                self.get_logger().warn(f"\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
+                self.pub.publish(self.twist)
 
 
 def main(args=None):
