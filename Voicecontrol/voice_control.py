@@ -162,36 +162,7 @@ class VoiceControlNode(Node):
             self.Hindernisserkennung = Hinderniserkennung.front
 
         else:
-<<<<<<< HEAD
-            if self.Hindernisserkennung != Hinderniserkennung.none:          # Umschalten auf Normalzustand
-                self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
-                self.Hindernisserkennung = Hinderniserkennung.none
-                self.DirectionState = DirectionState.none
-                stopTwist = Twist()
-                self.pub.publish(stopTwist)
-
-        # Hindernis wurde erkannt und Roboter befand sich in der Bewegung
-        if self.Hindernisserkennung == Hinderniserkennung.front and self.DirectionState == DirectionState.forward:
-            stopTwist = Twist()
-            self.pub.publish(stopTwist)
-            self.get_logger().warn(f"\n\n!!!!Hindernis Vorne erkannt in {min_distance_front:.2f} m – Hält an!\n")
-            self.twist.linear.x = -0.2
-            self.get_logger().info("\n\nRückwärts fahren bis kein Hindernis mehr im Weg\n")
-            self.pub.publish(self.twist)
-
-        elif self.Hindernisserkennung == Hinderniserkennung.back and self.DirectionState == DirectionState.backward:
-            stopTwist= Twist()
-            self.pub.publish(stopTwist)
-            self.get_logger().warn(f"\n\n!!!!Hindernis Hinten erkannt in {min_distance_back:.2f} m – Hält an!\n")
-            self.twist.linear.x = 0.2
-            self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
-            self.pub.publish(self.twist)
-
-
-        
->>>>>>> feature
-=======
-
+           
            if self.Hindernisserkennung != Hinderniserkennung.none:          # Umschalten auf Normalzustand
                
                self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
@@ -229,7 +200,7 @@ class VoiceControlNode(Node):
                     self.obstacle_handling_active = True
 
 #-------------Hauptprogram-------------     
->>>>>>> feature
+
 def main(args=None):
     rclpy.init(args=args)
     node = VoiceControlNode()
