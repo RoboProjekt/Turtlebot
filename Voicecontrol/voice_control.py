@@ -1,21 +1,24 @@
-import rclpy
-from rclpy.node import Node
-from geometry_msgs.msg import Twist
-from sensor_msgs.msg import LaserScan           # Für Hinderniserkennung
-from rclpy.qos import qos_profile_sensor_data
+import rclpy                                                             # type: ignore
+from rclpy.node import Node                                              # type: ignore
+from geometry_msgs.msg import Twist                                      # type: ignore
+from sensor_msgs.msg import LaserScan           # Für Hinderniserkennung # type: ignore
+from rclpy.qos import qos_profile_sensor_data                            # type: ignore
 from enum import Enum
 
-import sounddevice as sd
+import sounddevice as sd    # type: ignore
 import queue
 import json
-import vosk
-import numpy as np
+import vosk         # type: ignore
+import numpy as np  # type: ignore
 
-# Je nach dem wer den Code gerade testen will, ändert seinen Namen auf True und den anderen auf False für den richtigen Modelpfad
-Andy = True
-Bastian = False
+# Eintragen wer den Code gerade benutzt
+User = "andy"                           # Eintragen andy oder bastian
 
 Abstand = 0.3   # Abstand in Metern, bei dem ein Hindernis erkannt wird
+
+Timer_callback_Aufrufsintervall = 0.02  
+
+Angle = 20                      # gescannter Winkel in Grad
 
 class Hinderniserkennung(Enum):
     front = 1
@@ -25,7 +28,13 @@ class Hinderniserkennung(Enum):
 class DirectionState(Enum):
     forward = 1
     backward = 2 
-    none = 3
+    circle =3
+    none = 4
+
+# Erlaubte Befehle
+Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis"}
+
+Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
 
 # Erstellen der Node
 class VoiceControlNode(Node):
@@ -33,35 +42,39 @@ class VoiceControlNode(Node):
         super().__init__('voice_control_node')
         self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
-        # Pfad zum Vosk-Modell anpassen
-        if Andy:
+        # Pfad zum Vosk-Modell, User oben im Code anpassen !!!!!!
+        if User == "andy":
          model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"            #modelpath Andy
-        if Bastian:
+        elif User == "bastian":
          model_path = r"/home/basti/Schreibtisch/Turtlebot/vosk-model-de-0.15"                   #modelpath Bastian
 
         self.model = vosk.Model(model_path)
-
+        
+        #Initialisieren der Zustände
         self.Hindernisserkennung = Hinderniserkennung.none
         self.DirectionState = DirectionState.none
 
         self.q = queue.Queue()
         self.twist = Twist()
+        #Ändern der Mikrophon ID falls nötig, None für Standart
         self.device_id = None
 
-        self.stream = sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16',
+        self.stream = sd.RawInputStream(samplerate=16000, blocksize=2048, dtype='int16',
                                         channels=1, callback=self.audio_callback,
                                         device=self.device_id)
         self.stream.start()
 
-        self.rec = vosk.KaldiRecognizer(self.model, 16000)
+        self.rec = vosk.KaldiRecognizer(self.model, 16000)        # KI-Modell zur Stimmerkennung
 
-        self.get_logger().info("\n-----Sprachsteuerung gestartet-----\n Mögliche Befehle: vorwärts, zurück, halt, links, rechts, turn\n")
+        self.get_logger().info("\n-----Sprachsteuerung gestartet-----\n")
+        self.get_logger().info(Ausgabe_Befehlsliste)
 
-        self.timer = self.create_timer(0.1, self.timer_callback)
+        self.timer = self.create_timer(Timer_callback_Aufrufsintervall, self.timer_callback)
 
         # Hinderniserkennung
-        self.obstacle_detected = False
-        self.scan_sub = self.create_subscription(
+        self.obstacle_detected = False              # Zur Kennzeichnung ob Hindernis erkannt wurde
+        self.obstacle_handling_active = False       # Hinderniserkennungs Handling ist aktiv
+        self.scan_sub = self.create_subscription(   # Lidar Scan
             LaserScan,
             '/scan',
             self.scan_callback,
@@ -69,23 +82,23 @@ class VoiceControlNode(Node):
         )
 
 #-----------------------------------------------------------------------------------------------
-    #Funktion Ausgabe welches Audiogerät erkannt
+    #Funktion Handle der Audioaufnahme und  Fehleranzeige bei Audioübertragungsfehlern
     def audio_callback(self, indata, frames, time, status):
         if status:
             self.get_logger().warn(f"Sounddevice Status: {status}")
-        self.q.put(bytes(indata))
+        self.q.put(bytes(indata))       # Rohdaten der Audioaufnahme
 
 #-----------------------------------------------------------------------------------------------
-    #Funktion Kommando erkennung
+    #Funktion Kommando Erkennung, mit Sperrung der Erkennung bei Hinderniserkennung
     def timer_callback(self):
-        while not self.q.empty():
+        while not self.q.empty() and self.Hindernisserkennung == Hinderniserkennung.none:
             data = self.q.get()
             if self.rec.AcceptWaveform(data):
                 result = json.loads(self.rec.Result())
-                text = result.get("text", "")
-                if text:
-                    self.get_logger().info(f"Erkannt: {text}")
-                    self.handle_movement_Command(text)
+                command = result.get("text", "")
+                if command in Valid_Commands:
+                    self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
+                    self.handle_movement_Command(command)
 #-----------------------------------------------------------------------------------------------
     #Funktion zur Bewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
@@ -95,29 +108,30 @@ class VoiceControlNode(Node):
 
         if "vorwärts" in text:
             self.DirectionState = DirectionState.forward
-            self.twist.linear.x = 0.2
+            self.twist.linear.x = 0.5
         elif "zurück" in text:
             self.DirectionState = DirectionState.backward
-            self.twist.linear.x = -0.2
+            self.twist.linear.x = -0.5
         elif "links" in text:
             self.twist.angular.z = 0.2
         elif "rechts" in text:
             self.twist.angular.z = -0.2
-        elif "turn" in text:
+        elif "kreis" in text:
+            self.DirectionState = DirectionState.circle
             self.twist.linear.x = 0.3
             self.twist.angular.z = -0.6
         elif "halt" in text:
-            self.get_logger().info(f"Hält an\n-----Warte auf neuen Sprachbefehl-----\n")
+            self.get_logger().info(f"\n-----Warte auf neuen Sprachbefehl-----\n")
+            self.get_logger().info(Ausgabe_Befehlsliste)
         else:
             return  # Unbekannter Befehl
         
-        self.pub.publish(self.twist)
+        self.pub.publish(self.twist)        #Publishen des Befehls
 #-----------------------------------------------------------------------------------------------
     #Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
     #Neuer Aufruf sobal neuer LIDAR Scan empfangen wurde
     def scan_callback(self, msg):
        
-        Angle = 20                      # gescannter Winkel in Grad
         num_ranges = len(msg.ranges)
 
         front_center = num_ranges   # Beobachtet bei 360 grad, sprich Vorne
@@ -148,6 +162,7 @@ class VoiceControlNode(Node):
             self.Hindernisserkennung = Hinderniserkennung.front
 
         else:
+<<<<<<< HEAD
             if self.Hindernisserkennung != Hinderniserkennung.none:          # Umschalten auf Normalzustand
                 self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
                 self.Hindernisserkennung = Hinderniserkennung.none
@@ -174,6 +189,46 @@ class VoiceControlNode(Node):
 
 
         
+>>>>>>> feature
+=======
+
+           if self.Hindernisserkennung != Hinderniserkennung.none:          # Umschalten auf Normalzustand
+               
+               self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
+               self.get_logger().info(Ausgabe_Befehlsliste)
+               self.Hindernisserkennung = Hinderniserkennung.none
+               self.DirectionState = DirectionState.none
+               stopTwist = Twist()
+               self.pub.publish(stopTwist)
+               self.obstacle_handling_active = False
+
+                     
+    #Hindernis wurde erkannt und Roboter befand sich in der Bewegung
+        if self.Hindernisserkennung == Hinderniserkennung.front and (self.DirectionState == DirectionState.forward or self.DirectionState == DirectionState.circle):
+                
+                stopTwist = Twist()
+                self.pub.publish(stopTwist)
+                self.twist.linear.x = -0.2
+                self.pub.publish(self.twist)
+
+                if self.obstacle_handling_active == False:
+                    self.get_logger().warn(f"\n\n!!!!Hindernis Vorne erkannt in {min_distance_front:.2f} m  Hält an!\n")
+                    self.get_logger().info("\n\nRückwärts fahren bis kein Hindernis mehr im Weg\n")
+                    self.obstacle_handling_active = True
+
+        elif self.Hindernisserkennung == Hinderniserkennung.back and (self.DirectionState == DirectionState.backward or self.DirectionState == DirectionState.circle):
+                
+                stopTwist= Twist()
+                self.pub.publish(stopTwist)
+                self.twist.linear.x = 0.2
+                self.pub.publish(self.twist)
+
+                if self.obstacle_handling_active == False:
+                    self.get_logger().warn(f"\n\n!!!!Hindernis Hinten erkannt in {min_distance_back:.2f} m  Hält an!\n")
+                    self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
+                    self.obstacle_handling_active = True
+
+#-------------Hauptprogram-------------     
 >>>>>>> feature
 def main(args=None):
     rclpy.init(args=args)
