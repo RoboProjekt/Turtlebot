@@ -154,13 +154,11 @@ class VoiceControlNode(Node):
         min_distance_front = min(valid_ranges_front)        # kleinste Distanz der gemessenen Werte vorne
         min_distance_back = min(valid_ranges_back)          # kleinste Distanz der gemessenen Werte hinten
 
-    #Status umschalten nach Hinderniserkennung
+        # Status umschalten nach Hinderniserkennung
         if min_distance_back <= Abstand:
-
             self.Hindernisserkennung = Hinderniserkennung.back
 
         elif min_distance_front <= Abstand:
-
             self.Hindernisserkennung = Hinderniserkennung.front
 
         else:
