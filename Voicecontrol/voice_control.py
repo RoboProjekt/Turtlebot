@@ -113,9 +113,9 @@ class VoiceControlNode(Node):
             self.DirectionState = DirectionState.backward
             self.twist.linear.x = -0.5
         elif "links" in text:
-            self.twist.angular.z = 0.2
+            self.twist.angular.z = 0.3
         elif "rechts" in text:
-            self.twist.angular.z = -0.2
+            self.twist.angular.z = -0.3
         elif "kreis" in text:
             self.DirectionState = DirectionState.circle
             self.twist.linear.x = 0.3
