@@ -124,12 +124,14 @@
 				
 				
 	SPRACHERKENNUNG
-	-AUF PI
+	-AUF PI  (Für Später)
 	--wget https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip
 	--unzip vosk-model-small-de-0.15.zip
 	-AUF LAPTOP
 	-pip install vosk sounddevice
-	-Herunterladen von vosk-model-small-de-0.15
+	-Herunterladen von vosk-model-small-de-0.15:
+	-wget https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip
+	-unzip vosk-model-small-de-0.15.zip
 	-Erstellen von voice_control.py
 		
 	-Ende SPRACHERKENNUNG
