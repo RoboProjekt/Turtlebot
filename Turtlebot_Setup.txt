@@ -558,17 +558,26 @@ beta_nms=0.6
 
 ----------------Stand (9.6.2025 12.06)----------------------------------------------------------
 -------Nav2 starten und Map speichern----------
-Starten von Gazebo mit TURTLEBOT3_MODEL
+
+Starten von Gazebo mit TURTLEBOT3_MODEL:
 House:
-ros2 launch turtlebot3_gazebo turtlebot3_house.launch.py
+- ros2 launch turtlebot3_gazebo turtlebot3_house.launch.py
 World:
-ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+- ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+
+Starten von SLAM und Rviz:
+- ros2 launch turtlebot3_cartographer cartographer.launch.py use_sim_time:=True   (mit Gazebo)
+
+- ros2 launch turtlebot3_cartographer cartographer.launch.py 					  (ohen Gazebo)
 
 Map speichern:
-ros2 run nav2_map_server map_saver_cli -f  ~/Pfad/zur Map/Name der Map
+- ros2 run nav2_map_server map_saver_cli -f  ~/Pfad/zur Map/Name der Map
 
 Nav2 starten mit der zuvor gespeicherten Map:
-ros2 launch turtlebot3_navigation2 navigation2.launch.py use_sim_time:=True map:=Pfad/zur Map/Name_der_Map.yaml
+- ros2 launch turtlebot3_navigation2 navigation2.launch.py use_sim_time:=True map:=Pfad/zur Map/Name_der_Map.yaml   (mit Gazebo)
+
+- ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=turtlebot3_ws/map_saves/meine_karte.yaml 			(ohne Gazebo)
+
 
 
 
