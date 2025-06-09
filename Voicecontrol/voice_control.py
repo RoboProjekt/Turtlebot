@@ -32,7 +32,7 @@ class DirectionState(Enum):
     none = 4
 
 # Erlaubte Befehle
-Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis"}
+Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
 
@@ -73,8 +73,8 @@ class VoiceControlNode(Node):
 
         # Hinderniserkennung
         self.obstacle_detected = False              # Zur Kennzeichnung ob Hindernis erkannt wurde
-        self.obstacle_handling_active = False       # Hinderniserkennungs Handling ist aktiv
-        self.scan_sub = self.create_subscription(   # Lidar Scan
+        self.obstacle_handling_active = False       # Hinderniserkennung Handling ist aktiv
+        self.scan_sub = self.create_subscription(   # LIDAR Scan
             LaserScan,
             '/scan',
             self.scan_callback,
