@@ -591,7 +591,10 @@ Nav2 starten mit der zuvor gespeicherten Map:
 ----------------Stand (9.6.2025 12.06)----------------------------------------------------------
 
 
-
+	KI START EIGENE AUF TURTLEBOT
+	(Verschieben obj.data, obj.names yolov4-tiny-custom.cfg und yolov4-tiny-custom_best.weights auf pi (Alles nach ~/darknet/data/yolo-aiv2 verschoben))
+	-./darknet detector demo data/yolo-aiv2/obj.data data/yolo-aiv2/yolov4-tiny-custom.cfg \
+    data/yolo-aiv2/yolov4-tiny-custom_best.weights -c 0 -thresh 0.5
 
 	
 	
