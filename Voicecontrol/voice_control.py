@@ -11,6 +11,11 @@ import json
 import vosk         # type: ignore
 import numpy as np  # type: ignore
 
+# Für nav nutzung
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult  # type: ignore
+from geometry_msgs.msg import PoseStamped  # type: ignore
+
+
 # Eintragen wer den Code gerade benutzt
 User = "andy"                           # Eintragen andy oder bastian
 
@@ -33,6 +38,7 @@ class DirectionState(Enum):
 
 # Erlaubte Befehle
 Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
+Valid_point_Commands = {"tür flur", "tür labor", "wand"}
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
 
@@ -49,6 +55,22 @@ class VoiceControlNode(Node):
          model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-de-0.15"                   #modelpath Bastian
 
         self.model = vosk.Model(model_path)
+
+        # Zur koordinaten Anfahrt
+        self.navigator = BasicNavigator()
+        self.navigator.waitUntilNav2Active()
+
+        self.waypoints_list = {
+            "tür flur" :    (1.25,3.9),
+            "tür labor":    (-6.1,-0.95),
+            "wand":         (-0.9,-1.8)
+        }
+
+        self.orientation_list = {
+            "tür flur": 1.0,
+            "tür labor": 0.0,
+            "wand": 0.0
+        }
         
         #Initialisieren der Zustände
         self.Hindernisserkennung = Hinderniserkennung.none
@@ -99,6 +121,9 @@ class VoiceControlNode(Node):
                 if command in Valid_Commands:
                     self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
                     self.handle_movement_Command(command)
+                elif command in Valid_point_Commands:
+                    self.get_logger().info("Ziel Befehl erkannt: {command}")
+                    self.handle_movement_Command(command)
 #-----------------------------------------------------------------------------------------------
     #Funktion zur Bewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
@@ -125,8 +150,12 @@ class VoiceControlNode(Node):
             self.get_logger().info(Ausgabe_Befehlsliste)
         else:
             return  # Unbekannter Befehl
-        
         self.pub.publish(self.twist)        #Publishen des Befehls
+
+        for name, (x,y) in self.waypoints_list.items():
+            orientation = self.orientation_list.get(name, 1.0)
+            self.navigate_to_pose(x,y, orientation)
+            return
 #-----------------------------------------------------------------------------------------------
     #Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
     #Neuer Aufruf sobal neuer LIDAR Scan empfangen wurde
@@ -198,6 +227,31 @@ class VoiceControlNode(Node):
                     self.get_logger().warn(f"\n\n!!!!Hindernis Hinten erkannt in {min_distance_back:.2f} m  Hält an!\n")
                     self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
                     self.obstacle_handling_active = True
+
+    def navigate_to_pose(self, x, y, orientation_w):
+
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'map'
+        goal_pose.header.stamp = self.get_clock().now().to_msg()
+        goal_pose.pose.position.x = x
+        goal_pose.pose.position.y = y
+        goal_pose.pose.orientation.w = orientation_w
+
+        self.get_logger().info(f"Navigiere zu: x={x}, y={y}, w={orientation_w}")
+        self.navigator.goToPose(goal_pose)
+
+        while not self.navigator.isTaskComplete():
+            feedback = self.navigator.getFeedback()
+            if feedback and feedback.estimated_time_remaining.sec > 0:
+                self.get_logger().info(f"Verbleibende Zeit: {feedback.estimated_time_remaining.sec} s")
+            rclpy.spin_once(self)
+
+        result = self.navigator.getResult()
+        if result == TaskResult.SUCCEEDED:
+            self.get_logger().info("Ziel erreicht!")
+        else:
+            self.get_logger().warn("Navigation fehlgeschlagen oder abgebrochen.")
+
 
 #-------------Hauptprogram-------------     
 
