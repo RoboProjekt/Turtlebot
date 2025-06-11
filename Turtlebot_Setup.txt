@@ -6,6 +6,15 @@
 				PW: Mechatronischesprojekt_2025
 				Username: RoboProjekt
 				
+	    GIT NUTZUNG
+    -Änderungen aus git laden: cd ~/Pfad/zu/Ordner (cd ~/Schreibtisch/Turtlebot)
+    git pull
+    -Wenn unterschiedliche Versionen (verwerfen): git reset --hard
+    -Wenn Commiten: git add FILENAME
+    git commit
+    (Versions beschreibung eingeben, darf nicht leer sein)
+    git push
+				
 		
 
 	-Ubuntu Server 22.04.5 LTS x64 mit 'rpi-imager' auf SD Karte schreiben
@@ -558,7 +567,6 @@ beta_nms=0.6
 	
 
 
-----------------Stand (9.6.2025 12.06)----------------------------------------------------------
 -------Nav2 starten und Map speichern----------
 
 Starten von Gazebo mit TURTLEBOT3_MODEL:
@@ -580,6 +588,7 @@ Nav2 starten mit der zuvor gespeicherten Map:
 
 - ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=turtlebot3_ws/map_saves/meine_karte.yaml 			(ohne Gazebo)
 
+----------------Stand (9.6.2025 12.06)----------------------------------------------------------
 
 
 
