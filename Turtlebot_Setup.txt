@@ -623,11 +623,41 @@ Nav2 starten mit der zuvor gespeicherten Map:
 	--rviz2 (ADD alle 'By Topic' außer 'joint state: effort')
 	
 	-AUF Pi:
-	--ros2 run nav2_lifecycle_manager lifecycle_manager --ros-args -p autostart:=true -p node_names:="[map_server]"
-	--ros2 run nav2_lifecycle_manager lifecycle_manager --ros-args -p autostart:=true -p node_names:="[amcl]"
+	
+		HOFFENTLICH ALLES AUF EINMAL
+	--ros2 run nav2_lifecycle_manager lifecycle_manager --ros-args -p autostart:=true -p node_names:="[map_server, amcl, planner_server, controller_server, bt_navigator]"
+	
 	--ros2 run nav2_map_server map_server --ros-args -p yaml_filename:=/home/pi/Datentransfer/map_saves/H0.093.yaml
 	--ros2 run nav2_amcl amcl
+	--ros2 run nav2_planner planner_server
+	--ros2 run nav2_controller controller_server
 
+	
+ros2 run nav2_map_server map_server --ros-args -p yaml_filename:=/home/pi/Datentransfer/map_saves/H0.093.yaml
+ros2 lifecycle set /map_server configure
+ros2 lifecycle set /map_server activate
+
+ros2 run nav2_amcl amcl
+ros2 lifecycle set /amcl configure
+ros2 lifecycle set /amcl activate
+
+ros2 run nav2_planner planner_server
+ros2 lifecycle set /planner_server configure
+ros2 lifecycle set /planner_server activate
+
+ros2 run nav2_controller controller_server
+ros2 lifecycle set /controller_server configure
+ros2 lifecycle set /controller_server activate
+
+	/* Neustarten:
+	ros2 lifecycle set /map_server deactivate
+	ros2 lifecycle set /map_server cleanup
+	ros2 lifecycle set /map_server configure
+	ros2 lifecycle set /map_server activate
+	*/
+
+
+	
  	
 ----------------Stand (11.6.2025 15.34)----------------------------------------------------------	
 	
