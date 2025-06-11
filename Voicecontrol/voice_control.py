@@ -46,7 +46,7 @@ class VoiceControlNode(Node):
         if User == "andy":
          model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"            #modelpath Andy
         elif User == "bastian":
-         model_path = r"/home/basti/Schreibtisch/Turtlebot/vosk-model-de-0.15"                   #modelpath Bastian
+         model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-de-0.15"                   #modelpath Bastian
 
         self.model = vosk.Model(model_path)
         
