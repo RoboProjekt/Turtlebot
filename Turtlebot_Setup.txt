@@ -598,8 +598,15 @@ Nav2 starten mit der zuvor gespeicherten Map:
 	(Verschieben obj.data, obj.names yolov4-tiny-custom.cfg und yolov4-tiny-custom_best.weights auf pi (Alles nach ~/darknet/data/yolo-aiv2 verschoben))
 	-./darknet detector demo data/yolo-aiv2/obj.data data/yolo-aiv2/yolov4-tiny-custom.cfg \
     data/yolo-aiv2/yolov4-tiny-custom_best.weights -c 0 -thresh 0.5
+    
+	KI ROS TOPIC START
+	-cd ~/darknet   (Auf Pi)
+	-ros2 run darknet_publisher darknet_pub
+	(Zum Prüfen: 2.Fenster: ros2 topic echo /yolo_objects)
 
 	
+
+ 	
 ----------------Stand (11.6.2025 09.35)----------------------------------------------------------	
 	
 	
