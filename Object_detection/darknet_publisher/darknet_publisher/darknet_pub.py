@@ -11,7 +11,7 @@ class YoloPublisher(Node):
 
         # Starte Darknet als Subprozess
         self.process = subprocess.Popen(
-            ['./darknet', 'detector', 'demo', 'data/yolo-aiv2/obj.data',
+            ['home/pi/darknet/darknet', 'detector', 'demo', 'data/yolo-aiv2/obj.data',
              'data/yolo-aiv2/yolov4-tiny-custom.cfg', 'data/yolo-aiv2/yolov4-tiny-custom_best.weights',
              '-c', '0', '-thresh', '0.5'],
             stdout=subprocess.PIPE,
