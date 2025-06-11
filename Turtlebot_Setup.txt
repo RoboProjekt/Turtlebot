@@ -107,6 +107,9 @@
 	SENDEN VON ORDNERN AN TURTLEBOT MIT SSH
 	scp -r ~/mein/ordner pi@ip-adress:~/ziel/ordner/
 	(scp -r ~/Schreibtisch/Turtlebot_Setup.txt pi@192.168.1.116:~/)
+	UMGEKEHRT
+	scp -r pi@ip-adress:~/Ordner/Datei ~/ziel/Ordner/
+
 	
 	LIVESTREAM DURCH PI KAMERA
 	-sudo apt install mjpg-streamer
@@ -597,15 +600,7 @@ Nav2 starten mit der zuvor gespeicherten Map:
     data/yolo-aiv2/yolov4-tiny-custom_best.weights -c 0 -thresh 0.5
 
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+----------------Stand (11.6.2025 09.35)----------------------------------------------------------	
 	
 	
 	
