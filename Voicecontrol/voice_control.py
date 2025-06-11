@@ -32,7 +32,7 @@ class DirectionState(Enum):
     none = 4
 
 # Erlaubte Befehle
-Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis"}
+Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
 
