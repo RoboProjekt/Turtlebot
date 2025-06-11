@@ -33,6 +33,7 @@ class DirectionState(Enum):
 
 Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
 Valid_point_Commands = {"tür flur", "tür labor", "wand"}
+
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
 
 class VoiceControlNode(Node):
@@ -42,10 +43,8 @@ class VoiceControlNode(Node):
 
         if User == "andy":
             model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"
-            self.get_logger().info("Hallo andy")
         elif User == "bastian":
             model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-de-0.15"
-            self.get_logger().info("Hallo bastian")
 
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
