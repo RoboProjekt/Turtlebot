@@ -599,6 +599,17 @@ Nav2 starten mit der zuvor gespeicherten Map:
 	-./darknet detector demo data/yolo-aiv2/obj.data data/yolo-aiv2/yolov4-tiny-custom.cfg \
     data/yolo-aiv2/yolov4-tiny-custom_best.weights -c 0 -thresh 0.5
     
+	ROS ANBINDUNG/TOPIC ERSTELLEN
+	-cd ~/turtlebot3_ws/src
+	-ros2 pkg create --build-type ament_python darknet_publisher
+	-cd darknet_publisher/darknet_publisher
+	-nano darknet_pub.py (Liegt im git)
+	-cd ~/turtlebot3_ws/src/darknet_publisher
+	-nano setup.py (Liegt im git)
+	-colcon build
+	-source install/setup.bash
+	
+	    
 	KI ROS TOPIC START
 	-cd ~/darknet   (Auf Pi)
 	-ros2 run darknet_publisher darknet_pub
