@@ -615,10 +615,21 @@ Nav2 starten mit der zuvor gespeicherten Map:
 	-ros2 run darknet_publisher darknet_pub
 	(Zum Prüfen: 2.Fenster: ros2 topic echo /yolo_objects)
 
+	TURTLEBOT BUZZER
+	-ros2 service call /sound turtlebot3_msgs/srv/Sound "{value: 1}"
 	
+	NUTZEN EINER BEREITS ERSTELLTEN MAP
+	-AUF PC:
+	--rviz2 (ADD alle 'By Topic' außer 'joint state: effort')
+	
+	-AUF Pi:
+	--ros2 run nav2_lifecycle_manager lifecycle_manager --ros-args -p autostart:=true -p node_names:="[map_server]"
+	--ros2 run nav2_lifecycle_manager lifecycle_manager --ros-args -p autostart:=true -p node_names:="[amcl]"
+	--ros2 run nav2_map_server map_server --ros-args -p yaml_filename:=/home/pi/Datentransfer/map_saves/H0.093.yaml
+	--ros2 run nav2_amcl amcl
 
  	
-----------------Stand (11.6.2025 09.35)----------------------------------------------------------	
+----------------Stand (11.6.2025 15.34)----------------------------------------------------------	
 	
 	
 	
