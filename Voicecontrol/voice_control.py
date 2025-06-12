@@ -238,8 +238,24 @@ class VoiceControlNode(Node):
         self.get_logger().info(f"Navigiere zu: x={x}, y={y}, yaw={yaw_rad:.2f} rad")
         self.navigator.goToPose(goal_pose)
 
+        while not self.navigator.isTaskComplete():
+            feedback = self.navigator.getFeedback()
+            if feedback.navigation_duration > 600:
+                self.navigator.cancleTask()
 
+        result = self.navigator.getResult()    
+        if result == TaskResult.SUCCEEDED:
+            self.get_logger().info("Ziel erreicht!")
+        elif result == TaskResult.CANCELED:
+            self.get_logger().info("Ziel wurde gecanceled!")
+        elif result == TaskResult.FAILED:
+            self.get_logger().info("Ziel failed!")
+        
+        self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
+        self.get_logger().info(Ausgabe_Befehlsliste)
+        self.get_logger().info(Ausagbe_Navigationsbefehle)
 
+    
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
         qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - \
              math.cos(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
