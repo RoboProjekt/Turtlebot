@@ -11,6 +11,7 @@ import json
 import vosk  # type: ignore
 import numpy as np  # type: ignore
 import math
+import time
 
 from nav2_simple_commander.robot_navigator import BasicNavigator  # type: ignore
 from geometry_msgs.msg import PoseStamped  # type: ignore
@@ -56,8 +57,8 @@ class VoiceControlNode(Node):
         self.navigator = BasicNavigator()
 
         self.navigator.waitUntilNav2Active()
-        
 
+    
         self.waypoints_list = {
             "tür flur": (1.25, 3.9),
             "tür labor": (-6.1, -0.95),
@@ -222,8 +223,15 @@ class VoiceControlNode(Node):
                 self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.obstacle_handling_active = True
 
-    # Funktion zur Zielübergabe an NAvigateToPose
+    # Funktion zur Zielübergabe an NavigateToPose
     def navigate_to_pose(self, x, y, yaw_rad):
+
+        result = self.navigator.getResult()
+
+        TASK_Succeeded = 0
+        TASK_Canceled = 1
+        TASK_Failed = 2
+
         q = self.euler_to_quaternion(0, 0, yaw_rad)
 
         goal_pose = PoseStamped()
@@ -235,6 +243,13 @@ class VoiceControlNode(Node):
 
         self.get_logger().info(f"Navigiere zu: x={x}, y={y}, yaw={yaw_rad:.2f} rad")
         self.navigator.goToPose(goal_pose)
+
+        if result == TASK_Succeeded:
+            self.get_logger().info("Ziel erreicht")
+            self.get_logger().info(Ausgabe_Befehlsliste)
+            self.get_logger().info(Ausagbe_Navigationsbefehle)
+            return True
+
 
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
         qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - \
