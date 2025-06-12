@@ -151,6 +151,7 @@ class VoiceControlNode(Node):
         elif "halt" in text:
             self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
             self.get_logger().info(Ausgabe_Befehlsliste)
+            self.get_logger().info(Ausagbe_Navigationsbefehle)
         else:
             return
         self.pub.publish(self.twist)        # Publishen des Befehls
@@ -199,7 +200,7 @@ class VoiceControlNode(Node):
                 self.pub.publish(stopTwist)
                 self.obstacle_handling_active = False
         # Hindernis wurde erkannt und Roboter befand sich in der Bewegung während der Erkennung
-        if self.Hindernisserkennung == Hinderniserkennung.front and self.DirectionState in [DirectionState.forward, DirectionState.circle]:
+        if self.Hindernisserkennung == Hinderniserkennung.front and (self.DirectionState == DirectionState.forward or self.DirectionState == DirectionState.circle):
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = -0.2
@@ -210,7 +211,7 @@ class VoiceControlNode(Node):
                 self.get_logger().info("\n\nRückwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.obstacle_handling_active = True
 
-        elif self.Hindernisserkennung == Hinderniserkennung.back and self.DirectionState in [DirectionState.backward, DirectionState.circle]:
+        elif self.Hindernisserkennung == Hinderniserkennung.back and (self.DirectionState == DirectionState.backward or self.DirectionState == DirectionState.circle):
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = 0.2
