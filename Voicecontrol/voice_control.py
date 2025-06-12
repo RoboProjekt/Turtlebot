@@ -1,23 +1,24 @@
-import rclpy                                                             # type: ignore
-from rclpy.node import Node                                              # type: ignore
-from geometry_msgs.msg import Twist                                      # type: ignore
-from sensor_msgs.msg import LaserScan           # Für Hinderniserkennung # type: ignore
-from rclpy.qos import qos_profile_sensor_data                            # type: ignore
+import rclpy  # type: ignore
+from rclpy.node import Node  # type: ignore
+from geometry_msgs.msg import Twist  # type: ignore
+from sensor_msgs.msg import LaserScan  # Für Hinderniserkennung # type: ignore
+from rclpy.qos import qos_profile_sensor_data  # type: ignore
 from enum import Enum
 
-import sounddevice as sd    # type: ignore
+import sounddevice as sd  # type: ignore
 import queue
 import json
-import vosk         # type: ignore
+import vosk  # type: ignore
 import numpy as np  # type: ignore
+import math
 
-from nav2_simple_commander.robot_navigator import BasicNavigator    # type: ignore
-
-from geometry_msgs.msg import PoseStamped                           # type: ignore
+from nav2_simple_commander.robot_navigator import BasicNavigator  # type: ignore
+from geometry_msgs.msg import PoseStamped  # type: ignore
+from geometry_msgs.msg import Quaternion  # type: ignore
 
 User = "andy"  # "andy" oder "bastian"
 Abstand = 0.3
-Timer_callback_Aufrufsintervall = 0.02  
+Timer_callback_Aufrufsintervall = 0.02
 Angle = 20
 
 class Hinderniserkennung(Enum):
@@ -27,7 +28,7 @@ class Hinderniserkennung(Enum):
 
 class DirectionState(Enum):
     forward = 1
-    backward = 2 
+    backward = 2
     circle = 3
     none = 4
 
@@ -49,14 +50,24 @@ class VoiceControlNode(Node):
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
 
+        if self.navigator.waitUntilNav2Active():
+            self.get_logger().info("-----Nav2 ist aktiv-----")
+        else:
+            return
+
         self.waypoints_list = {
             "tür flur": (1.25, 3.9),
             "tür labor": (-6.1, -0.95),
             "wand": (-0.9, -1.8)
         }
-
+        
+        # Grad in Radiant für orientation_list
+        # 0°   -> 0.00
+        # 90°  -> 1.57
+        # 180° -> 3.14
+        # 270° -> 4.71
         self.orientation_list = {
-            "tür flur": 1.0,
+            "tür flur": 1.57,   # 90° in Radiant
             "tür labor": 0.0,
             "wand": 0.0
         }
@@ -90,13 +101,11 @@ class VoiceControlNode(Node):
             qos_profile_sensor_data
         )
 
-# -----------------------------------------------------------------------------------------------
     def audio_callback(self, indata, frames, time, status):
         if status:
             self.get_logger().warn(f"Sounddevice Status: {status}")
         self.q.put(bytes(indata))
 
-# -----------------------------------------------------------------------------------------------
     def timer_callback(self):
         while not self.q.empty() and self.Hindernisserkennung == Hinderniserkennung.none:
             data = self.q.get()
@@ -110,7 +119,6 @@ class VoiceControlNode(Node):
                     self.get_logger().info(f"Ziel Befehl erkannt: {command}")
                     self.handle_navigation_command(command)
 
-# -----------------------------------------------------------------------------------------------
     def handle_movement_Command(self, text):
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
@@ -136,16 +144,14 @@ class VoiceControlNode(Node):
             return
         self.pub.publish(self.twist)
 
-# -----------------------------------------------------------------------------------------------
     def handle_navigation_command(self, ziel_name):
         coords = self.waypoints_list.get(ziel_name)
-        orientation = self.orientation_list.get(ziel_name, 1.0)
+        orientation = self.orientation_list.get(ziel_name, 0.0)
 
         if coords:
             x, y = coords
             self.navigate_to_pose(x, y, orientation)
 
-# -----------------------------------------------------------------------------------------------
     def scan_callback(self, msg):
         num_ranges = len(msg.ranges)
         front_center = num_ranges
@@ -198,19 +204,36 @@ class VoiceControlNode(Node):
                 self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.obstacle_handling_active = True
 
-# -----------------------------------------------------------------------------------------------
-    def navigate_to_pose(self, x, y, orientation_w):
+    def navigate_to_pose(self, x, y, yaw_rad):
+        q = self.euler_to_quaternion(0, 0, yaw_rad)
+
         goal_pose = PoseStamped()
         goal_pose.header.frame_id = 'map'
         goal_pose.header.stamp = self.get_clock().now().to_msg()
         goal_pose.pose.position.x = x
         goal_pose.pose.position.y = y
-        goal_pose.pose.orientation.w = orientation_w
+        goal_pose.pose.orientation = q
 
-        self.get_logger().info(f"Navigiere zu: x={x}, y={y}, w={orientation_w}")
+        self.get_logger().info(f"Navigiere zu: x={x}, y={y}, yaw={yaw_rad:.2f} rad")
         self.navigator.goToPose(goal_pose)
 
-# -----------------------------------------------------------------------------------------------
+    def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
+        qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - \
+             math.cos(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
+        qy = math.cos(roll / 2) * math.sin(pitch / 2) * math.cos(yaw / 2) + \
+             math.sin(roll / 2) * math.cos(pitch / 2) * math.sin(yaw / 2)
+        qz = math.cos(roll / 2) * math.cos(pitch / 2) * math.sin(yaw / 2) - \
+             math.sin(roll / 2) * math.sin(pitch / 2) * math.cos(yaw / 2)
+        qw = math.cos(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) + \
+             math.sin(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
+
+        quat = Quaternion()
+        quat.x = qx
+        quat.y = qy
+        quat.z = qz
+        quat.w = qw
+        return quat
+
 def main(args=None):
     rclpy.init(args=args)
     node = VoiceControlNode()
