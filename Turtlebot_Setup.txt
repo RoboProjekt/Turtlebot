@@ -717,12 +717,12 @@ echo
 
 	NAV2 STARTEN (alles auf Turtlebot)
 	-ros2 launch turtlebot3_bringup robot.launch.py
-	-./nav2_startup.sh
 	-ros2 launch nav2_bringup navigation_launch.py \
   map:=/home/pi/Datentransfer/map_saves/H0.093.yaml \
   autostart:=true
   	-ros2 service call /map_server/load_map nav2_msgs/srv/LoadMap \
 "{map_url: '/home/pi/Datentransfer/map_saves/H0.093.yaml'}"
+	-./nav2_startup.sh
 
 
 ----------------Stand (12.6.2025 14.31)----------------------------------------------------------
