@@ -210,13 +210,6 @@ class VoiceControlNode(Node):
         self.get_logger().info(f"Navigiere zu: x={x}, y={y}, w={orientation_w}")
         self.navigator.goToPose(goal_pose)
 
-        while not self.navigator.isTaskComplete():
-            feedback = self.navigator.getFeedback()
-            if feedback and feedback.estimated_time_remaining.sec > 0:
-                self.get_logger().info(f"Verbleibende Zeit: {feedback.estimated_time_remaining.sec} s")
-            rclpy.spin_once(self)
-
-
 # -----------------------------------------------------------------------------------------------
 def main(args=None):
     rclpy.init(args=args)
