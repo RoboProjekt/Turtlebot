@@ -41,6 +41,7 @@ Valid_point_Commands = {"tür flur", "tür labor", "wand"}
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
 Ausagbe_Navigationsbefehle = "\nMögliche Navigationsziele: Tür Flur, Tür Labor, Wand\n"
 
+
 # Erstellen der Node
 class VoiceControlNode(Node):
     def __init__(self):
@@ -58,7 +59,6 @@ class VoiceControlNode(Node):
 
         self.navigator.waitUntilNav2Active()
 
-    
         self.waypoints_list = {
             "tür flur": (1.25, 3.9),
             "tür labor": (-6.1, -0.95),
@@ -226,12 +226,6 @@ class VoiceControlNode(Node):
     # Funktion zur Zielübergabe an NavigateToPose
     def navigate_to_pose(self, x, y, yaw_rad):
 
-        result = self.navigator.getResult()
-
-        TASK_Succeeded = 0
-        TASK_Canceled = 1
-        TASK_Failed = 2
-
         q = self.euler_to_quaternion(0, 0, yaw_rad)
 
         goal_pose = PoseStamped()
@@ -244,11 +238,6 @@ class VoiceControlNode(Node):
         self.get_logger().info(f"Navigiere zu: x={x}, y={y}, yaw={yaw_rad:.2f} rad")
         self.navigator.goToPose(goal_pose)
 
-        if result == TASK_Succeeded:
-            self.get_logger().info("Ziel erreicht")
-            self.get_logger().info(Ausgabe_Befehlsliste)
-            self.get_logger().info(Ausagbe_Navigationsbefehle)
-            return True
 
 
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
