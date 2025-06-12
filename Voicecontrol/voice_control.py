@@ -16,10 +16,11 @@ from nav2_simple_commander.robot_navigator import BasicNavigator  # type: ignore
 from geometry_msgs.msg import PoseStamped  # type: ignore
 from geometry_msgs.msg import Quaternion  # type: ignore
 
-User = "andy"  # "andy" oder "bastian"
-Abstand = 0.3
-Timer_callback_Aufrufsintervall = 0.02
-Angle = 20
+# Eingragen wer den Code gerade benutzt
+User = "andy"                               # andy oder bastian
+Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
+Timer_callback_Aufrufsintervall = 0.02      
+Angle = 20                                  # gescannter Winkel in Grad
 
 class Hinderniserkennung(Enum):
     front = 1
@@ -32,16 +33,20 @@ class DirectionState(Enum):
     circle = 3
     none = 4
 
+# Erlaubte Befehle
 Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
 Valid_point_Commands = {"tür flur", "tür labor", "wand"}
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
+Ausagbe_Navigationsbefehle = "\nMögliche Navigationsziele: Tür Flur, Tür Labor, Wand\n"
 
+# Erstellen der Node
 class VoiceControlNode(Node):
     def __init__(self):
         super().__init__('voice_control_node')
         self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
+        # Pfad zum Vosk-Modell, User oben im Code eintragen !!!!
         if User == "andy":
             model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"
         elif User == "bastian":
@@ -50,10 +55,8 @@ class VoiceControlNode(Node):
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
 
-        if self.navigator.waitUntilNav2Active():
-            self.get_logger().info("-----Nav2 ist aktiv-----")
-        else:
-            return
+        self.navigator.waitUntilNav2Active()
+        
 
         self.waypoints_list = {
             "tür flur": (1.25, 3.9),
@@ -72,10 +75,13 @@ class VoiceControlNode(Node):
             "wand": 0.0
         }
 
+        # Initialisieren der Zustände
         self.Hindernisserkennung = Hinderniserkennung.none
         self.DirectionState = DirectionState.none
+
         self.q = queue.Queue()
         self.twist = Twist()
+        #Änder der Mikrophon ID notendig falls sie nicht auf Standart steht --> None entspricht Standart
         self.device_id = None
 
         self.stream = sd.RawInputStream(
@@ -88,24 +94,28 @@ class VoiceControlNode(Node):
 
         self.get_logger().info("\n-----Sprachsteuerung gestartet-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
+        self.get_logger().info(Ausagbe_Navigationsbefehle)
 
         self.timer = self.create_timer(Timer_callback_Aufrufsintervall, self.timer_callback)
 
-        self.obstacle_detected = False
-        self.obstacle_handling_active = False
+        # Hinderniserkennung
+        self.obstacle_detected = False                  # Zur erkennung ob Hindernis erkannt wurde
+        self.obstacle_handling_active = False           # Hinderniserkennungs Handling Status
 
-        self.scan_sub = self.create_subscription(
+        self.scan_sub = self.create_subscription(       # LIDAR Scan
             LaserScan,
             '/scan',
             self.scan_callback,
             qos_profile_sensor_data
         )
 
+    # Funktion Handle der Audioaufnahme und Fehleranzeige bei Audioübertragungsfehlern
     def audio_callback(self, indata, frames, time, status):
         if status:
             self.get_logger().warn(f"Sounddevice Status: {status}")
         self.q.put(bytes(indata))
 
+    # Funktion zur Kommando Erkennung, mit Sperrung der Erkennnung bei Hinderniserkennung
     def timer_callback(self):
         while not self.q.empty() and self.Hindernisserkennung == Hinderniserkennung.none:
             data = self.q.get()
@@ -119,6 +129,7 @@ class VoiceControlNode(Node):
                     self.get_logger().info(f"Ziel Befehl erkannt: {command}")
                     self.handle_navigation_command(command)
 
+    # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
@@ -142,8 +153,9 @@ class VoiceControlNode(Node):
             self.get_logger().info(Ausgabe_Befehlsliste)
         else:
             return
-        self.pub.publish(self.twist)
+        self.pub.publish(self.twist)        # Publishen des Befehls
 
+    # Funktion zur Zielnavigationssteuerung des Roboters
     def handle_navigation_command(self, ziel_name):
         coords = self.waypoints_list.get(ziel_name)
         orientation = self.orientation_list.get(ziel_name, 0.0)
@@ -152,28 +164,33 @@ class VoiceControlNode(Node):
             x, y = coords
             self.navigate_to_pose(x, y, orientation)
 
+    # Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
+    # Neuer Aufruf sobald neuer LIDAR Scan empfangen wurde
     def scan_callback(self, msg):
         num_ranges = len(msg.ranges)
-        front_center = num_ranges
-        window_front = msg.ranges[max(0, front_center - Angle):min(num_ranges, front_center + Angle)]
-        back_center = num_ranges // 2
+
+        front_center = num_ranges   # Beobachtet bei 360 Grad, sprich vorne
+        window_front = msg.ranges[max(0, front_center - Angle):min(num_ranges, front_center + Angle)] # Beobachtet 360 - Angle : 359 + Angle Werte
+
+        back_center = num_ranges // 2   # Beobachtet bei 360 Grad/2 = 180 Grad, sprich hinten
         window_back = msg.ranges[max(0, back_center - Angle):min(num_ranges, back_center + Angle)]
 
-        valid_ranges_front = [r for r in window_front if np.isfinite(r) and r > 0.05]
-        valid_ranges_back = [r for r in window_back if np.isfinite(r) and r > 0.05]
+        valid_ranges_front = [r for r in window_front if np.isfinite(r) and r > 0.05]   # Gültige Werte für Hinderniserkennung auf der Vorderseite
+        valid_ranges_back = [r for r in window_back if np.isfinite(r) and r > 0.05]     # Gültige Werte für Hinderniserkennung auf der Rückseite
 
-        if not valid_ranges_front or not valid_ranges_back:
+        if not valid_ranges_front or not valid_ranges_back:     # Beenden falls keine gültigen Werte erkannt wurden
             return
 
-        min_distance_front = min(valid_ranges_front)
-        min_distance_back = min(valid_ranges_back)
+        min_distance_front = min(valid_ranges_front)            # kleinste Distanz der gemessenen Werte vorne
+        min_distance_back = min(valid_ranges_back)              # kleinste Distanz der gemessenen Werte hinten
 
+        # Status umschalten nach Hinderniserkennung
         if min_distance_back <= Abstand:
             self.Hindernisserkennung = Hinderniserkennung.back
         elif min_distance_front <= Abstand:
             self.Hindernisserkennung = Hinderniserkennung.front
         else:
-            if self.Hindernisserkennung != Hinderniserkennung.none:
+            if self.Hindernisserkennung != Hinderniserkennung.none:         # Umschalten auf Normalzustand
                 self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
                 self.get_logger().info(Ausgabe_Befehlsliste)
                 self.Hindernisserkennung = Hinderniserkennung.none
@@ -181,7 +198,7 @@ class VoiceControlNode(Node):
                 stopTwist = Twist()
                 self.pub.publish(stopTwist)
                 self.obstacle_handling_active = False
-
+        # Hindernis wurde erkannt und Roboter befand sich in der Bewegung während der Erkennung
         if self.Hindernisserkennung == Hinderniserkennung.front and self.DirectionState in [DirectionState.forward, DirectionState.circle]:
             stopTwist = Twist()
             self.pub.publish(stopTwist)
@@ -204,6 +221,7 @@ class VoiceControlNode(Node):
                 self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.obstacle_handling_active = True
 
+    # Funktion zur Zielübergabe an NAvigateToPose
     def navigate_to_pose(self, x, y, yaw_rad):
         q = self.euler_to_quaternion(0, 0, yaw_rad)
 
@@ -234,6 +252,7 @@ class VoiceControlNode(Node):
         quat.w = qw
         return quat
 
+#------Hauptprogram------
 def main(args=None):
     rclpy.init(args=args)
     node = VoiceControlNode()
