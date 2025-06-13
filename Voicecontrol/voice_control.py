@@ -206,6 +206,7 @@ class VoiceControlNode(Node):
         if self.Hindernisserkennung == Hinderniserkennung.front and (self.DirectionState == DirectionState.forward or self.DirectionState == DirectionState.circle):
             if not self.navigator.isTaskComplete():
                 self.navigator.cancleTask()
+                self.get_logger().warn(f"\n\nHindernis wurde vorne erkannt, Navigation wurde abgebrochen !!\n\n")
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = -0.2
