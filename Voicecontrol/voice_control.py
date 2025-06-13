@@ -236,7 +236,8 @@ class VoiceControlNode(Node):
         goal_pose.pose.position.y = y
         goal_pose.pose.orientation = q
 
-        self.get_logger().info(f"Navigiere zu: x={x}, y={y}, yaw={yaw_rad:.2f} rad")
+        self.get_logger().info(f"\nNavigiere zu: x={x}, y={y}, yaw={yaw_rad:.2f} rad\n")
+
         self.navigator.goToPose(goal_pose)
 
         while not self.navigator.isTaskComplete():
