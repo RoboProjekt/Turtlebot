@@ -37,10 +37,8 @@ class DirectionState(Enum):
 
 # Erlaubte Befehle
 Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
-<<<<<<< HEAD
-=======
 Valid_point_Commands = {"tür flur", "tür labor", "wand"}
->>>>>>> main
+
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
 Ausagbe_Navigationsbefehle = "\nMögliche Navigationsziele: Tür Flur, Tür Labor, Wand\n"
@@ -206,6 +204,8 @@ class VoiceControlNode(Node):
                 self.obstacle_handling_active = False
         # Hindernis wurde erkannt und Roboter befand sich in der Bewegung während der Erkennung
         if self.Hindernisserkennung == Hinderniserkennung.front and (self.DirectionState == DirectionState.forward or self.DirectionState == DirectionState.circle):
+            if not self.navigator.isTaskComplete():
+                self.navigator.cancleTask()
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = -0.2
@@ -217,6 +217,8 @@ class VoiceControlNode(Node):
                 self.obstacle_handling_active = True
 
         elif self.Hindernisserkennung == Hinderniserkennung.back and (self.DirectionState == DirectionState.backward or self.DirectionState == DirectionState.circle):
+            if not self.navigator.isTaskComplete():
+                self.navigator.cancleTask()
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = 0.2
