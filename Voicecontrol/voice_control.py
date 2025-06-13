@@ -2,6 +2,7 @@ import rclpy  # type: ignore
 from rclpy.node import Node  # type: ignore
 from geometry_msgs.msg import Twist  # type: ignore
 from sensor_msgs.msg import LaserScan  # Für Hinderniserkennung # type: ignore
+from turtlebot3_msgs.srv import Sound #type: ignore
 from rclpy.qos import qos_profile_sensor_data  # type: ignore
 from enum import Enum
 
@@ -249,7 +250,7 @@ class VoiceControlNode(Node):
         elif result == TaskResult.CANCELED:
             self.get_logger().info("Ziel wurde gecanceled!")
         elif result == TaskResult.FAILED:
-            self.get_logger().info("Ziel failed!")
+            self.get_logger().info("Ziel konnte nicht erreicht werden!")
         
         self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
