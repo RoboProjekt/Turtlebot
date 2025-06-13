@@ -6,6 +6,15 @@
 				PW: Mechatronischesprojekt_2025
 				Username: RoboProjekt
 				
+	    GIT NUTZUNG
+    -Änderungen aus git laden: cd ~/Pfad/zu/Ordner (cd ~/Schreibtisch/Turtlebot)
+    git pull
+    -Wenn unterschiedliche Versionen (verwerfen): git reset --hard
+    -Wenn Commiten: git add FILENAME
+    git commit
+    (Versions beschreibung eingeben, darf nicht leer sein)
+    git push
+				
 		
 
 	-Ubuntu Server 22.04.5 LTS x64 mit 'rpi-imager' auf SD Karte schreiben
@@ -98,6 +107,9 @@
 	SENDEN VON ORDNERN AN TURTLEBOT MIT SSH
 	scp -r ~/mein/ordner pi@ip-adress:~/ziel/ordner/
 	(scp -r ~/Schreibtisch/Turtlebot_Setup.txt pi@192.168.1.116:~/)
+	UMGEKEHRT
+	scp -r pi@ip-adress:~/Ordner/Datei ~/ziel/Ordner/
+
 	
 	LIVESTREAM DURCH PI KAMERA
 	-sudo apt install mjpg-streamer
@@ -124,104 +136,16 @@
 				
 				
 	SPRACHERKENNUNG
-	-AUF PI
+	-AUF PI  (Für Später)
 	--wget https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip
 	--unzip vosk-model-small-de-0.15.zip
 	-AUF LAPTOP
 	-pip install vosk sounddevice
-	-Herunterladen von vosk-model-small-de-0.15
-	-Erstellen von voice_control.py:
-		import rclpy
-		from rclpy.node import Node
-		from geometry_msgs.msg import Twist
-	
-		import sounddevice as sd
-		import queue
-		import json
-		import vosk
-		import sys
-
-		class VoiceControlNode(Node):
-		    def __init__(self):
-		        super().__init__('voice_control_node')
-		        self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
-
-		        model_path = r"/home/basti/Schreibtisch/vosk-model-small-de-0.15"
-		        self.get_logger().info(f"Lade Vosk-Modell von: {model_path}")
-		        self.model = vosk.Model(model_path)
-	
-		        self.q = queue.Queue()
-		        self.twist = Twist()
-
-		        # Mikrofon-Gerät ID hier anpassen, oder None für Standard
-		        self.device_id = None
-
-		        self.stream = sd.RawInputStream(samplerate=16000, blocksize=8000, dtype='int16',
-                                        channels=1, callback=self.audio_callback,
-                                        device=self.device_id)
-		        self.stream.start()
-
-		        self.rec = vosk.KaldiRecognizer(self.model, 16000)
-
-        		self.get_logger().info("Sprachsteuerung gestartet - sag: vorwärts, rückwärts, links, rechts, stopp")
-
-        		self.timer = self.create_timer(0.1, self.timer_callback)
-	
-		    def audio_callback(self, indata, frames, time, status):
-		        if status:
-		            self.get_logger().warn(f"Sounddevice Status: {status}")
-		        self.q.put(bytes(indata))
-
-		    def timer_callback(self):
-		        while not self.q.empty():
-		            data = self.q.get()
-		            if self.rec.AcceptWaveform(data):
-		                result = json.loads(self.rec.Result())
-		                text = result.get("text", "")
-		                if text:
-		                    self.get_logger().info(f"Erkannt: {text}")
-        		            self.handle_command(text)
-
-    		def handle_command(self, text):
-		        # Reset Bewegung
-		        self.twist.linear.x = 0.0
-		        self.twist.angular.z = 0.0
-
-		        if "vorwärts" in text:
-		            self.twist.linear.x = 0.2
-		        elif "rückwärts" in text:
-		            self.twist.linear.x = -0.2
-		        elif "links" in text:
-		            self.twist.angular.z = 0.5
-        		elif "rechts" in text:
-	       		     self.twist.angular.z = -0.5
-	       		 elif "halt" in text or "halt" in text:
-	       		     # Keine Bewegung
-		            pass
-		        else:
-		            # Unbekannter Befehl, nichts tun
-			    return
-
-		        self.pub.publish(self.twist)
-		        self.get_logger().info(f"Bewegung gesendet: linear.x={self.twist.linear.x}, angular.z={self.twist.angular.z}")
-
-		def main(args=None):
-		    rclpy.init(args=args)
-		    node = VoiceControlNode()
-		    try:
-		        rclpy.spin(node)
-		    except KeyboardInterrupt:
-		        pass
-		    finally:
-		        node.stream.stop()
-		        node.stream.close()
-		        node.destroy_node()
-       			rclpy.shutdown()
-
-		if __name__ == "__main__":
-		    main()
-	
-	
+	-Herunterladen von vosk-model-small-de-0.15:
+	-wget https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip
+	-unzip vosk-model-small-de-0.15.zip
+	-Erstellen von voice_control.py
+		
 	-Ende SPRACHERKENNUNG
 	-Zum Starten 'ros2 launch turtlebot3_bringup robot.launch.py' auf dem pi und 'python3 voice_control.py' im '~/Schreibtisch' Verzeichnis starten
 	
@@ -644,22 +568,208 @@ beta_nms=0.6
 	
 ----------------stand (05.06.2025 15:41)--------------------------------------------------------
 	
+
+
+-------Nav2 starten und Map speichern----------
+
+Starten von Gazebo mit TURTLEBOT3_MODEL:
+House:
+- ros2 launch turtlebot3_gazebo turtlebot3_house.launch.py
+World:
+- ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+
+Starten von SLAM und Rviz:
+- ros2 launch turtlebot3_cartographer cartographer.launch.py use_sim_time:=True   (mit Gazebo)
+
+- ros2 launch turtlebot3_cartographer cartographer.launch.py 					  (ohen Gazebo)
+
+Map speichern:
+- ros2 run nav2_map_server map_saver_cli -f  ~/Pfad/zur Map/Name der Map
+
+Nav2 starten mit der zuvor gespeicherten Map:
+- ros2 launch turtlebot3_navigation2 navigation2.launch.py use_sim_time:=True map:=Pfad/zur Map/Name_der_Map.yaml   (mit Gazebo)
+
+- ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=turtlebot3_ws/map_saves/meine_karte.yaml 			(ohne Gazebo)
+
+----------------Stand (9.6.2025 12.06)----------------------------------------------------------
+
+
+	KI START EIGENE AUF TURTLEBOT
+	(Verschieben obj.data, obj.names yolov4-tiny-custom.cfg und yolov4-tiny-custom_best.weights auf pi (Alles nach ~/darknet/data/yolo-aiv2 verschoben))
+	-cd ~/darknet/
+	-./darknet detector demo data/yolo-aiv2/obj.data data/yolo-aiv2/yolov4-tiny-custom.cfg \
+    data/yolo-aiv2/yolov4-tiny-custom_best.weights -c 0 -thresh 0.5
+    
+	ROS ANBINDUNG/TOPIC ERSTELLEN
+	-cd ~/turtlebot3_ws/src
+	-ros2 pkg create --build-type ament_python darknet_publisher
+	-cd darknet_publisher/darknet_publisher
+	-nano darknet_pub.py (Liegt im git)
+	-cd ~/turtlebot3_ws/src/darknet_publisher
+	-nano setup.py (Liegt im git)
+	-colcon build
+	-source install/setup.bash
 	
+	    
+	KI ROS TOPIC START
+	-cd ~/darknet   (Auf Pi)
+	-ros2 run darknet_publisher darknet_pub
+	(Zum Prüfen: 2.Fenster: ros2 topic echo /yolo_objects)
+
+	TURTLEBOT BUZZER
+	-ros2 service call /sound turtlebot3_msgs/srv/Sound "{value: 1}"
 	
+	LIFECYCLE MANUELL NUTZEN
+	ros2 lifecycle set /map_server configure
+	ros2 lifecycle set /map_server activate
+	/* Neustarten:
+	ros2 lifecycle set /map_server deactivate
+	ros2 lifecycle set /map_server cleanup
+	ros2 lifecycle set /map_server configure
+	ros2 lifecycle set /map_server activate
+	*/	
+ 	
+----------------Stand (11.6.2025 15.34)----------------------------------------------------------	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
+	-nano nav2_startup.sh:
+#!/usr/bin/env bash
+
+# Pfade
+MAP_FILE="/home/pi/Datentransfer/map_saves/H0.093.yaml"
+PARAMS_FILE="/home/pi/Datentransfer/nav2_params.yaml"
+
+# Nodes in der Reihenfolge, wie sie hochgefahren werden sollten:
+NODES=(
+  "map_server nav2_map_server map_server --ros-args -p yaml_filename:=\"${MAP_FILE}\""
+  "amcl      nav2_amcl        amcl"
+  "planner_server  nav2_planner    planner_server --ros-args -p params_file:=\"${PARAMS_FILE}\""
+  "controller_server nav2_controller controller_server --ros-args -p params_file:=\"${PARAMS_FILE}\""
+  "bt_navigator      nav2_bt_navigator  bt_navigator --ros-args -p params_file:=\"${PARAMS_FILE}\""
+)
+
+echo "== Starte Nav2-Stack mit eigenem params_file =="
+echo
+
+# 1) jeden Node prüfen und ggf. starten
+for entry in "${NODES[@]}"; do
+  read -r name pkg exe args <<< "$entry"
+  if ros2 node list | grep -qw "/${name}"; then
+    echo "[✓] '${name}' läuft bereits."
+  else
+    echo "[→] Starte '${name}'..."
+    ros2 run $pkg $exe $args &
+    sleep 2
+  fi
+done
+
+# 2) Manuelles Lifecycle-Handling
+echo
+echo "== Lifecycle-Management =="
+for name in map_server amcl planner_server controller_server bt_navigator; do
+  echo
+  echo ">>> Bearbeite '/${name}'"
+  state=$(ros2 lifecycle get "/${name}" 2>/dev/null | awk '{print $1}')
+  case "$state" in
+    unconfigured)
+      echo "    unconfigured → configure & activate"
+      ros2 lifecycle set "/${name}" configure
+      ros2 lifecycle set "/${name}" activate
+      ;;
+    inactive)
+      echo "    inactive → activate"
+      ros2 lifecycle set "/${name}" activate
+      ;;
+    active)
+      echo "    already active"
+      ;;
+    *)
+      echo "    state='$state' (überspringe)"
+      ;;
+  esac
+
+  # Für bt_navigator warten wir zusätzlich auf den follow_path-Action-Server
+  if [ "$name" = "bt_navigator" ]; then
+    echo -n "    Warte auf follow_path Action-Server..."
+    # bis zu 10s warten
+    timeout=0
+    until ros2 action list | grep -q "/follow_path"; do
+      sleep 1
+      (( timeout++ ))
+      if [ "$timeout" -ge 10 ]; then
+        echo " fehlgeschlagen!"
+        echo "    → Stelle sicher, dass 'controller_server' aktiv ist und die critics geladen sind."
+        break
+      fi
+      echo -n "."
+    done
+    echo " OK"
+  fi
+done
+
+echo
+echo "== Fertig. Bitte prüfe mit:"
+echo "   ros2 lifecycle get <node>    # z.B. /controller_server"
+echo "   ros2 action list             # sollte /follow_path enthalten"
+echo "   ros2 topic echo /map         # Karte sichtbar?"
+echo
+
+	-chmod +x ~/nav2_startup
+
+	NAV2 STARTEN (alles auf Turtlebot)
+	-ros2 launch turtlebot3_bringup robot.launch.py
+	-ros2 launch nav2_bringup navigation_launch.py \
+  map:=/home/pi/Datentransfer/map_saves/H0.093.yaml \
+  autostart:=true
+  	-ros2 service call /map_server/load_map nav2_msgs/srv/LoadMap \
+"{map_url: '/home/pi/Datentransfer/map_saves/H0.093.yaml'}"
+	-./nav2_startup.sh
+
+
+----------------Stand (12.6.2025 14.31)----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 	
 	
