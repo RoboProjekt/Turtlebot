@@ -13,7 +13,7 @@ import numpy as np  # type: ignore
 import math
 import time
 
-from nav2_simple_commander.robot_navigator import BasicNavigator  # type: ignore
+from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult  # type: ignore
 from geometry_msgs.msg import PoseStamped  # type: ignore
 from geometry_msgs.msg import Quaternion  # type: ignore
 
@@ -273,17 +273,4 @@ class VoiceControlNode(Node):
         quat.w = qw
         return quat
 
-#------Hauptprogram------
-def main(args=None):
-    rclpy.init(args=args)
-    node = VoiceControlNode()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        node.get_logger().info("Node gestoppt.")
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
 
-if __name__ == '__main__':
-    main()
