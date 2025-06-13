@@ -13,7 +13,7 @@ class YoloPublisher(Node):
         self.process = subprocess.Popen(
             ['home/pi/darknet/darknet', 'detector', 'demo', 'data/yolo-aiv2/obj.data',
              'data/yolo-aiv2/yolov4-tiny-custom.cfg', 'data/yolo-aiv2/yolov4-tiny-custom_best.weights',
-             '-c', '0', '-thresh', '0.5'],
+             '-c', '0', '-thresh', '0.7'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
