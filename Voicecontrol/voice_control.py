@@ -205,7 +205,7 @@ class VoiceControlNode(Node):
         # Hindernis wurde erkannt und Roboter befand sich in der Bewegung während der Erkennung
         if self.Hindernisserkennung == Hinderniserkennung.front and (self.DirectionState == DirectionState.forward or self.DirectionState == DirectionState.circle):
             if not self.navigator.isTaskComplete():
-                self.navigator.cancleTask()
+                self.navigator.cancelTask()
                 self.get_logger().warn(f"\n\nHindernis wurde vorne erkannt, Navigation wurde abgebrochen !!\n\n")
             stopTwist = Twist()
             self.pub.publish(stopTwist)
@@ -219,7 +219,7 @@ class VoiceControlNode(Node):
 
         elif self.Hindernisserkennung == Hinderniserkennung.back and (self.DirectionState == DirectionState.backward or self.DirectionState == DirectionState.circle):
             if not self.navigator.isTaskComplete():
-                self.navigator.cancleTask()
+                self.navigator.cancelTask()
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = 0.2
@@ -249,7 +249,7 @@ class VoiceControlNode(Node):
         while not self.navigator.isTaskComplete():
             feedback = self.navigator.getFeedback()
             if feedback.navigation_duration > 600:
-                self.navigator.cancleTask()
+                self.navigator.cancelTask()
 
         result = self.navigator.getResult()    
         if result == TaskResult.SUCCEEDED:
