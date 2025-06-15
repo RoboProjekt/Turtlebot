@@ -40,7 +40,7 @@ Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
 Valid_point_Commands = {"tür flur", "tür labor", "wand"}
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
-Ausagbe_Navigationsbefehle = "\nMögliche Navigationsziele: Tür Flur, Tür Labor, Wand\n"
+Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Tür Flur, Tür Labor, Wand\n"
 
 
 # Erstellen der Node
