@@ -20,7 +20,7 @@ from geometry_msgs.msg import Quaternion  # type: ignore
 
 # Eingragen wer den Code gerade benutzt
 User = "andy"                               # andy oder bastian
-samplerate_number = 16000                   # 44100 für NUtzung auf pi
+samplerate_number = 44100                   # 44100 für NUtzung auf pi
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
 Timer_callback_Aufrufsintervall = 0.02      
@@ -56,7 +56,7 @@ class VoiceControlNode(Node):
         if User == "andy":
             model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"
         elif User == "bastian":
-            model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-de-0.15"
+            model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-small-de-0.15"
         elif User == "pi":
             model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Voicecontrol/vosk-model-small-de-0.15"
 
@@ -129,12 +129,12 @@ class VoiceControlNode(Node):
             if self.rec.AcceptWaveform(data):
                 result = json.loads(self.rec.Result())
                 command = result.get("text", "")
-                
-                self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
-                self.handle_movement_Command(command)
-             #   elif command in Valid_point_Commands:
-             #       self.get_logger().info(f"Ziel Befehl erkannt: {command}")
-             #       self.handle_navigation_command(command)
+                if command in Valid_Commands:
+                    self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
+                    self.handle_movement_Command(command)
+                elif command in Valid_point_Commands:
+                   self.get_logger().info(f"Ziel Befehl erkannt: {command}")
+                   self.handle_navigation_command(command)
 
     # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
