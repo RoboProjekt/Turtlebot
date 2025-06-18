@@ -1,5 +1,5 @@
 import rclpy                                #type: ignore
-from voicecontrol import VoiceControlNode   #type: ignore
+from voice_control import VoiceControlNode   #type: ignore
 
 def main(args=None):
     rclpy.init(args=args)

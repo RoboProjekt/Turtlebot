@@ -37,11 +37,11 @@ class DirectionState(Enum):
 
 # Erlaubte Befehle
 Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
-Valid_point_Commands = {"tür flur", "tür labor", "wand"}
+Valid_point_Commands = {"tür flur", "tür labor", "stellplatz"}
 
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
-Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Tür Flur, Tür Labor, Wand\n"
+Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Tür Flur, Tür Labor, Stellplatz\n"
 
 
 # Erstellen der Node
@@ -64,7 +64,7 @@ class VoiceControlNode(Node):
         self.waypoints_list = {
             "tür flur": (1.25, 3.9),
             "tür labor": (-6.1, -0.95),
-            "wand": (-0.9, -1.8)
+            "stellplatz": (-0.9, -1.8)
         }
         
         # Grad in Radiant für orientation_list
@@ -75,7 +75,7 @@ class VoiceControlNode(Node):
         self.orientation_list = {
             "tür flur": 1.57,   # 90° in Radiant
             "tür labor": 0.0,
-            "wand": 0.0
+            "stellplatz": 0.0
         }
 
         # Initialisieren der Zustände
@@ -233,6 +233,7 @@ class VoiceControlNode(Node):
     # Funktion zur Zielübergabe an NavigateToPose
     def navigate_to_pose(self, x, y, yaw_rad):
 
+        result = self.navigator.getResult()   
         q = self.euler_to_quaternion(0, 0, yaw_rad)
 
         goal_pose = PoseStamped()
@@ -244,12 +245,6 @@ class VoiceControlNode(Node):
 
         self.get_logger().info(f"\nNavigiere zu: x={x}, y={y}, yaw={yaw_rad:.2f} rad\n")
 
-        self.navigator.goToPose(goal_pose)
-
-        while not self.navigator.isTaskComplete():
-            feedback = self.navigator.getFeedback()
-            if feedback.navigation_duration > 600:
-                self.navigator.cancelTask()
 
         result = self.navigator.getResult()    
         if result == TaskResult.SUCCEEDED:
@@ -259,9 +254,7 @@ class VoiceControlNode(Node):
         elif result == TaskResult.FAILED:
             self.get_logger().info("Ziel konnte nicht erreicht werden!")
         
-        self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
-        self.get_logger().info(Ausgabe_Befehlsliste)
-        self.get_logger().info(Ausagbe_Navigationsbefehle)
+        
 
     
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
