@@ -209,6 +209,7 @@ class VoiceControlNode(Node):
         if self.Hindernisserkennung == Hinderniserkennung.front and (self.DirectionState == DirectionState.forward or self.DirectionState == DirectionState.circle):
             if not self.navigator.isTaskComplete():
                 self.navigator.cancelTask()
+                self.navigating = False
                 self.get_logger().warn(f"\n\nHindernis wurde vorne erkannt, Navigation wurde abgebrochen !!\n\n")
             stopTwist = Twist()
             self.pub.publish(stopTwist)
@@ -223,6 +224,7 @@ class VoiceControlNode(Node):
         elif self.Hindernisserkennung == Hinderniserkennung.back and (self.DirectionState == DirectionState.backward or self.DirectionState == DirectionState.circle):
             if not self.navigator.isTaskComplete():
                 self.navigator.cancelTask()
+                self.navigating = False
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = 0.2
@@ -235,8 +237,7 @@ class VoiceControlNode(Node):
 
     # Funktion zur Zielübergabe an NavigateToPose
     def navigate_to_pose(self, x, y, yaw_rad):
-
-        result = self.navigator.getResult()   
+  
         q = self.euler_to_quaternion(0, 0, yaw_rad)
 
         goal_pose = PoseStamped()
@@ -250,16 +251,16 @@ class VoiceControlNode(Node):
 
         self.navigator.goToPose(goal_pose)
 
-        
         # Warten bis Navigation abgeschlossen ist
         while not self.navigator.isTaskComplete() and self.navigating == True:
                 rclpy.spin_once(self, timeout_sec=0.1)
-                
-        
+                      
+        result = self.navigator.getResult() 
         if self.navigating and self.navigator.isTaskComplete():
             result = self.navigator.getResult()
             if result == TaskResult.SUCCEEDED:
                 self.get_logger().info(" ✅ Ziel erfolgreich erreicht.")
+                self.navigator.cancelTask()
             elif result == TaskResult.FAILED:
                 self.get_logger().warn(" ❌ Navigation fehlgeschlagen.")
             elif result == TaskResult.CANCELED:
@@ -271,10 +272,6 @@ class VoiceControlNode(Node):
             self.get_logger().info(Ausagbe_Navigationsbefehle)
 
         
-        
-        
-
-    
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
         qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - \
              math.cos(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
