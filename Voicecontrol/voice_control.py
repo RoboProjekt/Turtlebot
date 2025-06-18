@@ -20,6 +20,7 @@ from geometry_msgs.msg import Quaternion  # type: ignore
 
 # Eingragen wer den Code gerade benutzt
 User = "andy"                               # andy oder bastian
+samplerate_number = 16000                   # 44100 für NUtzung auf pi
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
 Timer_callback_Aufrufsintervall = 0.02      
 Angle = 20                                  # gescannter Winkel in Grad
@@ -41,6 +42,7 @@ Valid_point_Commands = {"tür flur", "tür labor", "wand"}
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
 Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Tür Flur, Tür Labor, Wand\n"
+
 
 
 # Erstellen der Node
@@ -89,7 +91,7 @@ class VoiceControlNode(Node):
         self.device_id = None
 
         self.stream = sd.RawInputStream(
-            samplerate=16000, blocksize=2048, dtype='int16',
+            samplerate=samplerate_number, blocksize=2048, dtype='int16',
             channels=1, callback=self.audio_callback,
             device=self.device_id)
         self.stream.start()
@@ -126,12 +128,12 @@ class VoiceControlNode(Node):
             if self.rec.AcceptWaveform(data):
                 result = json.loads(self.rec.Result())
                 command = result.get("text", "")
-                if command in Valid_Commands:
-                    self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
-                    self.handle_movement_Command(command)
-                elif command in Valid_point_Commands:
-                    self.get_logger().info(f"Ziel Befehl erkannt: {command}")
-                    self.handle_navigation_command(command)
+                
+                self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
+                self.handle_movement_Command(command)
+             #   elif command in Valid_point_Commands:
+             #       self.get_logger().info(f"Ziel Befehl erkannt: {command}")
+             #       self.handle_navigation_command(command)
 
     # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
