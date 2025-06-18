@@ -57,7 +57,7 @@ class VoiceControlNode(Node):
         elif User == "bastian":
             model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-de-0.15"
         elif User == "pi":
-            model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Voicecontrol/vosk-model-de-0.15"
+            model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Voicecontrol/vosk-model-small-de-0.15"
 
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
