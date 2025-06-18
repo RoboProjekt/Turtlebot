@@ -4,7 +4,7 @@ import sys
 # absolute_src_path = '/home/pi/turtlebot_ws/src'    #gilt nur auf PI
 # sys.path.append(absolute_src_path)
 
-from voicecontrol import VoiceControlNode   #type: ignore
+from voice_control import VoiceControlNode   #type: ignore
 # from darknet_publisher.darknet_pub import YoloPublisher
 
 def main(args=None):
