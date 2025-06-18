@@ -13,6 +13,7 @@ import vosk  # type: ignore
 import numpy as np  # type: ignore
 import math
 import time
+import threading
 
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult  # type: ignore
 from geometry_msgs.msg import PoseStamped  # type: ignore
@@ -21,7 +22,7 @@ from geometry_msgs.msg import Quaternion  # type: ignore
 # Eingragen wer den Code gerade benutzt
 User = "andy"                               # andy oder bastian
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
-Timer_callback_Aufrufsintervall = 0.02      
+Timer_callback_Aufrufsintervall = 0.01      
 Angle = 20                                  # gescannter Winkel in Grad
 
 class Hinderniserkennung(Enum):
@@ -55,6 +56,10 @@ class VoiceControlNode(Node):
             model_path = r"/home/andy/Turtelbot3_voicecontroll/vosk-model-small-de-0.15"
         elif User == "bastian":
             model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-de-0.15"
+
+        def __del__(self):
+            self.get_logger().info("VoiceControlNode wird zerstört!")
+
 
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
@@ -207,10 +212,6 @@ class VoiceControlNode(Node):
                 self.obstacle_handling_active = False
         # Hindernis wurde erkannt und Roboter befand sich in der Bewegung während der Erkennung
         if self.Hindernisserkennung == Hinderniserkennung.front and (self.DirectionState == DirectionState.forward or self.DirectionState == DirectionState.circle):
-            if not self.navigator.isTaskComplete():
-                self.navigator.cancelTask()
-                self.navigating = False
-                self.get_logger().warn(f"\n\nHindernis wurde vorne erkannt, Navigation wurde abgebrochen !!\n\n")
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = -0.2
@@ -222,9 +223,6 @@ class VoiceControlNode(Node):
                 self.obstacle_handling_active = True
 
         elif self.Hindernisserkennung == Hinderniserkennung.back and (self.DirectionState == DirectionState.backward or self.DirectionState == DirectionState.circle):
-            if not self.navigator.isTaskComplete():
-                self.navigator.cancelTask()
-                self.navigating = False
             stopTwist = Twist()
             self.pub.publish(stopTwist)
             self.twist.linear.x = 0.2
@@ -253,23 +251,24 @@ class VoiceControlNode(Node):
 
         # Warten bis Navigation abgeschlossen ist
         while not self.navigator.isTaskComplete() and self.navigating == True:
-                rclpy.spin_once(self, timeout_sec=0.1)
-                      
-        result = self.navigator.getResult() 
-        if self.navigating and self.navigator.isTaskComplete():
-            result = self.navigator.getResult()
-            if result == TaskResult.SUCCEEDED:
-                self.get_logger().info(" ✅ Ziel erfolgreich erreicht.")
-                self.navigator.cancelTask()
-            elif result == TaskResult.FAILED:
-                self.get_logger().warn(" ❌ Navigation fehlgeschlagen.")
-            elif result == TaskResult.CANCELED:
-                self.get_logger().warn(" ⚠️ Navigation wurde abgebrochen.")
+                time.sleep(0.1)
 
-            self.navigating = False
-            self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
-            self.get_logger().info(Ausgabe_Befehlsliste)
-            self.get_logger().info(Ausagbe_Navigationsbefehle)
+        if self.navigating:             
+            result = self.navigator.getResult() 
+            self.get_logger().info(f"Navigation Result: {result}")
+        if result == TaskResult.SUCCEEDED:
+                self.get_logger().info("✅ Ziel erfolgreich erreicht.")
+        elif result == TaskResult.FAILED:
+                self.get_logger().warn("❌ Navigation fehlgeschlagen.")
+        elif result == TaskResult.CANCELED:
+                self.get_logger().warn("⚠️ Navigation wurde abgebrochen.")
+
+        self.navigator.cancelTask()
+        self.navigating = False
+        self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
+        self.get_logger().info(Ausgabe_Befehlsliste)
+        self.get_logger().info(Ausagbe_Navigationsbefehle)
+        
 
         
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
