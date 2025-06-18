@@ -61,6 +61,8 @@ class VoiceControlNode(Node):
 
         self.navigator.waitUntilNav2Active()
 
+        self.navigating = False
+
         self.waypoints_list = {
             "tür flur": (1.25, 3.9),
             "tür labor": (-6.1, -0.95),
@@ -130,6 +132,7 @@ class VoiceControlNode(Node):
                     self.handle_movement_Command(command)
                 elif command in Valid_point_Commands:
                     self.get_logger().info(f"Ziel Befehl erkannt: {command}")
+                    self.navigating = True
                     self.handle_navigation_command(command)
 
     # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
@@ -245,14 +248,29 @@ class VoiceControlNode(Node):
 
         self.get_logger().info(f"\nNavigiere zu: x={x}, y={y}, yaw={yaw_rad:.2f} rad\n")
 
+        self.navigator.goToPose(goal_pose)
 
-        result = self.navigator.getResult()    
-        if result == TaskResult.SUCCEEDED:
-            self.get_logger().info("Ziel erreicht!")
-        elif result == TaskResult.CANCELED:
-            self.get_logger().info("Ziel wurde gecanceled!")
-        elif result == TaskResult.FAILED:
-            self.get_logger().info("Ziel konnte nicht erreicht werden!")
+        
+        # Warten bis Navigation abgeschlossen ist
+        while not self.navigator.isTaskComplete() and self.navigating == True:
+                rclpy.spin_once(self, timeout_sec=0.1)
+                
+        
+        if self.navigating and self.navigator.isTaskComplete():
+            result = self.navigator.getResult()
+            if result == TaskResult.SUCCEEDED:
+                self.get_logger().info(" ✅ Ziel erfolgreich erreicht.")
+            elif result == TaskResult.FAILED:
+                self.get_logger().warn(" ❌ Navigation fehlgeschlagen.")
+            elif result == TaskResult.CANCELED:
+                self.get_logger().warn(" ⚠️ Navigation wurde abgebrochen.")
+
+            self.navigating = False
+            self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
+            self.get_logger().info(Ausgabe_Befehlsliste)
+            self.get_logger().info(Ausagbe_Navigationsbefehle)
+
+        
         
         
 
