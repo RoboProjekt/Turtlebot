@@ -255,7 +255,6 @@ class VoiceControlNode(Node):
 
         if self.navigating:             
             result = self.navigator.getResult() 
-            self.get_logger().info(f"Navigation Result: {result}")
         if result == TaskResult.SUCCEEDED:
                 self.get_logger().info("✅ Ziel erfolgreich erreicht.")
         elif result == TaskResult.FAILED:
