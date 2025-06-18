@@ -21,6 +21,7 @@ from geometry_msgs.msg import Quaternion  # type: ignore
 # Eingragen wer den Code gerade benutzt
 User = "andy"                               # andy oder bastian
 samplerate_number = 16000                   # 44100 für NUtzung auf pi
+blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
 Timer_callback_Aufrufsintervall = 0.02      
 Angle = 20                                  # gescannter Winkel in Grad
@@ -91,7 +92,7 @@ class VoiceControlNode(Node):
         self.device_id = None
 
         self.stream = sd.RawInputStream(
-            samplerate=samplerate_number, blocksize=2048, dtype='int16',
+            samplerate=samplerate_number, blocksize=blocksize_number, dtype='int16',
             channels=1, callback=self.audio_callback,
             device=self.device_id)
         self.stream.start()
