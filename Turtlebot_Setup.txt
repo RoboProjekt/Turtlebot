@@ -591,7 +591,7 @@ Nav2 starten mit der zuvor gespeicherten Map:
 
 - ros2 launch turtlebot3_navigation2 navigation2.launch.py map:=turtlebot3_ws/map_saves/meine_karte.yaml 			(ohne Gazebo)
 
-----------------Stand (9.6.2025 12.06)----------------------------------------------------------
+----------------Stand (9.6.2025 12:06)----------------------------------------------------------
 
 
 	KI START EIGENE AUF TURTLEBOT
@@ -629,7 +629,7 @@ Nav2 starten mit der zuvor gespeicherten Map:
 	ros2 lifecycle set /map_server activate
 	*/	
  	
-----------------Stand (11.6.2025 15.34)----------------------------------------------------------	
+----------------Stand (11.6.2025 15:34)----------------------------------------------------------	
 	
 	-nano nav2_startup.sh:
 #!/usr/bin/env bash
@@ -727,15 +727,32 @@ echo
 "{map_url: '/home/pi/Datentransfer/map_saves/H0.093.yaml'}"
 
 
-----------------Stand (12.6.2025 14.31)----------------------------------------------------------
+----------------Stand (12.6.2025 14:31)----------------------------------------------------------
 
 
 	RVIZ CUSTOM STARTEN
 	-rvi2 -d pfad/zur/Datei.rviz
 	oder: 
 	-cd pfad/zur/Datei
+	
+	INSTALLIEREN USB MIKROFON
+	-python3
+	--import sounddevice as sd
+	--print(sd.query_devices())
+	-sudo apt install pulseaudio-utils
+	-sudo apt install pulseaudio
+	-pulseaudio -k
+	-pulseaudio --start
+	-alsamixer
+	-pactl list sources short
+	-pactl list sources | grep -A 15 alsa_input.usb-C-Media_Electronics_Inc._USB_PnP_Sound_Device-00.analog-mono
+	-pactl set-source-mute alsa_input.usb-C-Media_Electronics_Inc._USB_PnP_Sound_Device-00.analog-mono 0
 
 
+	
+
+
+----------------Stand (18.06.2025 15:16)----------------------------------------------------------
 
 
 
