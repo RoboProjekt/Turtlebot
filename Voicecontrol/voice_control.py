@@ -13,6 +13,7 @@ import vosk  # type: ignore
 import numpy as np  # type: ignore
 import math
 import time
+import threading
 
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult  # type: ignore
 from geometry_msgs.msg import PoseStamped  # type: ignore
@@ -23,7 +24,7 @@ User = "andy"                               # andy oder bastian
 samplerate_number = 44100                   # 44100 für NUtzung auf pi
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
-Timer_callback_Aufrufsintervall = 0.02      
+Timer_callback_Aufrufsintervall = 0.01      
 Angle = 20                                  # gescannter Winkel in Grad
 
 class Hinderniserkennung(Enum):
@@ -39,10 +40,11 @@ class DirectionState(Enum):
 
 # Erlaubte Befehle
 Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
-Valid_point_Commands = {"tür flur", "tür labor", "wand"}
+Valid_point_Commands = {"tür flur", "tür labor", "stellplatz"}
+
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
-Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Tür Flur, Tür Labor, Wand\n"
+Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Tür Flur, Tür Labor, Stellplatz\n"
 
 
 
@@ -60,15 +62,21 @@ class VoiceControlNode(Node):
         elif User == "pi":
             model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Voicecontrol/vosk-model-small-de-0.15"
 
+        def __del__(self):
+            self.get_logger().info("VoiceControlNode wird zerstört!")
+
+
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
 
         self.navigator.waitUntilNav2Active()
 
+        self.navigating = False
+
         self.waypoints_list = {
             "tür flur": (1.25, 3.9),
             "tür labor": (-6.1, -0.95),
-            "wand": (-0.9, -1.8)
+            "stellplatz": (-0.9, -1.8)
         }
         
         # Grad in Radiant für orientation_list
@@ -79,7 +87,7 @@ class VoiceControlNode(Node):
         self.orientation_list = {
             "tür flur": 1.57,   # 90° in Radiant
             "tür labor": 0.0,
-            "wand": 0.0
+            "stellplatz": 0.0
         }
 
         # Initialisieren der Zustände
@@ -133,8 +141,10 @@ class VoiceControlNode(Node):
                     self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
                     self.handle_movement_Command(command)
                 elif command in Valid_point_Commands:
-                   self.get_logger().info(f"Ziel Befehl erkannt: {command}")
-                   self.handle_navigation_command(command)
+                    self.get_logger().info(f"Ziel Befehl erkannt: {command}")
+                    self.navigating = True
+                    self.handle_navigation_command(command)
+
 
     # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
@@ -148,9 +158,9 @@ class VoiceControlNode(Node):
             self.DirectionState = DirectionState.backward
             self.twist.linear.x = -0.5
         elif "links" in text:
-            self.twist.angular.z = 0.2
+            self.twist.angular.z = 0.3
         elif "rechts" in text:
-            self.twist.angular.z = -0.2
+            self.twist.angular.z = -0.3
         elif "kreis" in text:
             self.DirectionState = DirectionState.circle
             self.twist.linear.x = 0.3
@@ -231,7 +241,7 @@ class VoiceControlNode(Node):
 
     # Funktion zur Zielübergabe an NavigateToPose
     def navigate_to_pose(self, x, y, yaw_rad):
-
+  
         q = self.euler_to_quaternion(0, 0, yaw_rad)
 
         goal_pose = PoseStamped()
@@ -245,24 +255,27 @@ class VoiceControlNode(Node):
 
         self.navigator.goToPose(goal_pose)
 
-        while not self.navigator.isTaskComplete():
-            feedback = self.navigator.getFeedback()
-            if feedback.navigation_duration > 600:
-                self.navigator.cancleTask()
+        # Warten bis Navigation abgeschlossen ist
+        while not self.navigator.isTaskComplete() and self.navigating == True:
+                time.sleep(0.1)
 
-        result = self.navigator.getResult()    
+        if self.navigating:             
+            result = self.navigator.getResult() 
         if result == TaskResult.SUCCEEDED:
-            self.get_logger().info("Ziel erreicht!")
-        elif result == TaskResult.CANCELED:
-            self.get_logger().info("Ziel wurde gecanceled!")
+                self.get_logger().info("✅ Ziel erfolgreich erreicht.")
         elif result == TaskResult.FAILED:
-            self.get_logger().info("Ziel konnte nicht erreicht werden!")
-        
+                self.get_logger().warn("❌ Navigation fehlgeschlagen.")
+        elif result == TaskResult.CANCELED:
+                self.get_logger().warn("⚠️ Navigation wurde abgebrochen.")
+
+        self.navigator.cancelTask()
+        self.navigating = False
         self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
         self.get_logger().info(Ausagbe_Navigationsbefehle)
+        
 
-    
+        
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
         qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - \
              math.cos(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
