@@ -5,6 +5,7 @@ from sensor_msgs.msg import LaserScan  # Für Hinderniserkennung # type: ignore
 from turtlebot3_msgs.srv import Sound #type: ignore
 from rclpy.qos import qos_profile_sensor_data  # type: ignore
 from enum import Enum
+from std_srvs.srv import SetBool
 
 import sounddevice as sd  # type: ignore
 import queue
@@ -65,7 +66,6 @@ class VoiceControlNode(Node):
         def __del__(self):
             self.get_logger().info("VoiceControlNode wird zerstört!")
 
-        self.lidar_active = False
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
 
@@ -124,6 +124,22 @@ class VoiceControlNode(Node):
             qos_profile_sensor_data
         )
 
+    def set_motor_power(self, active: bool):
+
+    client = self.create_client(SetBool, '/motor_power')
+    while not client.wait_for_service(timeout_sec=1.0):
+        self.get_logger().warn('/motor_power service not available...')
+
+    req = SetBool.Request()
+    req.data = active
+    future = client.call_async(req)
+
+    if active:
+        self.get_logger().info("✅ LDS- und Antriebsmotor aktiviert.")
+    else:
+        self.get_logger().info("🛑 LDS- und Antriebsmotor deaktiviert (Ruhezustand).")
+
+
     # Funktion Handle der Audioaufnahme und Fehleranzeige bei Audioübertragungsfehlern
     def audio_callback(self, indata, frames, time, status):
         if status:
@@ -139,12 +155,12 @@ class VoiceControlNode(Node):
                 command = result.get("text", "")
                 if command in Valid_Commands:
                     self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
-                    self.lidar_active = True
+                    self.set_motor_power(True)
                     self.handle_movement_Command(command)
                 elif command in Valid_point_Commands:
                     self.get_logger().info(f"Ziel Befehl erkannt: {command}")
                     self.navigating = True
-                    self.lidar_active = True
+                    self.set_motor_power(True)
                     self.handle_navigation_command(command)
 
 
@@ -171,7 +187,7 @@ class VoiceControlNode(Node):
             self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
             self.get_logger().info(Ausgabe_Befehlsliste)
             self.get_logger().info(Ausagbe_Navigationsbefehle)
-            self.lidar_active = False
+            self.set_motor_power(False)
         else:
             return
         self.pub.publish(self.twist)        # Publishen des Befehls
@@ -276,7 +292,7 @@ class VoiceControlNode(Node):
         self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
         self.get_logger().info(Ausagbe_Navigationsbefehle)
-        self.lidar_active = False
+        self.set_motor_power(False)
         
 
         
