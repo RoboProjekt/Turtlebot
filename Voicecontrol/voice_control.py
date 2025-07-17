@@ -21,7 +21,7 @@ from geometry_msgs.msg import Quaternion  # type: ignore
 
 # Eingragen wer den Code gerade benutzt
 User = "pi"                               # andy oder bastian
-samplerate_number = 16000                   # 44100 für NUtzung auf pi
+samplerate_number = 16000                   # 16000 für NUtzung auf pi sonst 44100
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
 Timer_callback_Aufrufsintervall = 0.01
@@ -64,7 +64,6 @@ class VoiceControlNode(Node):
 
         def __del__(self):
             self.get_logger().info("VoiceControlNode wird zerstört!")
-
 
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
