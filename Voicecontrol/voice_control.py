@@ -20,11 +20,11 @@ from geometry_msgs.msg import PoseStamped  # type: ignore
 from geometry_msgs.msg import Quaternion  # type: ignore
 
 # Eingragen wer den Code gerade benutzt
-User = "andy"                               # andy oder bastian
-samplerate_number = 44100                   # 44100 für NUtzung auf pi
+User = "pi"                               # andy oder bastian
+samplerate_number = 16000                   # 44100 für NUtzung auf pi
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
-Timer_callback_Aufrufsintervall = 0.01      
+Timer_callback_Aufrufsintervall = 0.01
 Angle = 20                                  # gescannter Winkel in Grad
 
 class Hinderniserkennung(Enum):
