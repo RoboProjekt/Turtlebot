@@ -65,6 +65,7 @@ class VoiceControlNode(Node):
         def __del__(self):
             self.get_logger().info("VoiceControlNode wird zerstört!")
 
+        self.lidar_active = False
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
 
@@ -138,10 +139,12 @@ class VoiceControlNode(Node):
                 command = result.get("text", "")
                 if command in Valid_Commands:
                     self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
+                    self.lidar_active = True
                     self.handle_movement_Command(command)
                 elif command in Valid_point_Commands:
                     self.get_logger().info(f"Ziel Befehl erkannt: {command}")
                     self.navigating = True
+                    self.lidar_active = True
                     self.handle_navigation_command(command)
 
 
@@ -168,6 +171,7 @@ class VoiceControlNode(Node):
             self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
             self.get_logger().info(Ausgabe_Befehlsliste)
             self.get_logger().info(Ausagbe_Navigationsbefehle)
+            self.lidar_active = False
         else:
             return
         self.pub.publish(self.twist)        # Publishen des Befehls
@@ -272,6 +276,7 @@ class VoiceControlNode(Node):
         self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
         self.get_logger().info(Ausagbe_Navigationsbefehle)
+        self.lidar_active = False
         
 
         
