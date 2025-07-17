@@ -1,5 +1,4 @@
 import rclpy                                #type: ignore
-<<<<<<< HEAD
 import sys
 
 # absolute_src_path = '/home/pi/turtlebot_ws/src'    #gilt nur auf PI
@@ -7,9 +6,8 @@ import sys
 
 from voice_control import VoiceControlNode   #type: ignore
 # from darknet_publisher.darknet_pub import YoloPublisher
-=======
-from voice_control import VoiceControlNode   #type: ignore
->>>>>>> feature
+
+
 
 def main(args=None):
     rclpy.init(args=args)
