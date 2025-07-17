@@ -126,18 +126,18 @@ class VoiceControlNode(Node):
 
     def set_motor_power(self, active: bool):
 
-    client = self.create_client(SetBool, '/motor_power')
-    while not client.wait_for_service(timeout_sec=1.0):
-        self.get_logger().warn('/motor_power service not available...')
+        client = self.create_client(SetBool, '/motor_power')
+        while not client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn('/motor_power service not available...')
 
-    req = SetBool.Request()
-    req.data = active
-    future = client.call_async(req)
+        req = SetBool.Request()
+        req.data = active
+        future = client.call_async(req)
 
-    if active:
-        self.get_logger().info("✅ LDS- und Antriebsmotor aktiviert.")
-    else:
-        self.get_logger().info("🛑 LDS- und Antriebsmotor deaktiviert (Ruhezustand).")
+        if active:
+            self.get_logger().info("✅ LDS- und Antriebsmotor aktiviert.")
+        else:
+            self.get_logger().info("🛑 LDS- und Antriebsmotor deaktiviert (Ruhezustand).")
 
 
     # Funktion Handle der Audioaufnahme und Fehleranzeige bei Audioübertragungsfehlern
