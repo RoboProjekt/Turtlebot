@@ -41,11 +41,11 @@ class DirectionState(Enum):
 
 # Erlaubte Befehle
 Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
-Valid_point_Commands = {"tür flur", "tür labor", "stellplatz"}
+Valid_point_Commands = {"flur", "labor", "stellplatz"}
 
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
-Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Tür Flur, Tür Labor, Stellplatz\n"
+Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Flur, Labor, Stellplatz\n"
 
 
 
@@ -74,8 +74,8 @@ class VoiceControlNode(Node):
         self.navigating = False
 
         self.waypoints_list = {
-            "tür flur": (1.25, 3.9),
-            "tür labor": (-6.1, -0.95),
+            "flur": (1.25, 3.9),
+            "labor": (-6.1, -0.95),
             "stellplatz": (-0.9, -1.8)
         }
         
@@ -85,8 +85,8 @@ class VoiceControlNode(Node):
         # 180° -> 3.14
         # 270° -> 4.71
         self.orientation_list = {
-            "tür flur": 1.57,   # 90° in Radiant
-            "tür labor": 0.0,
+            "flur": 1.57,   # 90° in Radiant
+            "labor": 0.0,
             "stellplatz": 0.0
         }
 
