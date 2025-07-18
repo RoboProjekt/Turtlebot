@@ -126,7 +126,7 @@ class VoiceControlNode(Node):
         )
 
 
-    def play_sound(self, sound_value=1):
+    def play_sound(self, sound_value=2):
         request = Sound.Request()
         request.value = sound_value
         future = self.sound_client.call_async(request)
@@ -287,7 +287,6 @@ class VoiceControlNode(Node):
         self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
         self.get_logger().info(Ausagbe_Navigationsbefehle)
-        self.set_motor_power(False)
         
 
         
