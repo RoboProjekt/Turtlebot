@@ -131,12 +131,7 @@ class VoiceControlNode(Node):
         request.value = sound_value
         future = self.sound_client.call_async(request)
 
-    def play_sound_multiple(self, count: int, sound_value: int = 1, delay: float = 0.3):
-        for _ in range(count):
-            self.play_sound(sound_value)
-            time.sleep(delay)
-
-
+    
     # Funktion Handle der Audioaufnahme und Fehleranzeige bei Audioübertragungsfehlern
     def audio_callback(self, indata, frames, time, status):
         if status:
@@ -276,7 +271,7 @@ class VoiceControlNode(Node):
             result = self.navigator.getResult() 
         if result == TaskResult.SUCCEEDED:
                 self.get_logger().info("✅ Ziel erfolgreich erreicht.")
-                self.play_sound_multiple(2)
+                self.play_sound(1)
         elif result == TaskResult.FAILED:
                 self.get_logger().warn("❌ Navigation fehlgeschlagen.")
         elif result == TaskResult.CANCELED:
