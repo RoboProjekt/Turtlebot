@@ -124,21 +124,6 @@ class VoiceControlNode(Node):
             qos_profile_sensor_data
         )
 
-    def set_motor_power(self, active: bool):
-
-        client = self.create_client(SetBool, '/motor_power')
-        while not client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().warn('/motor_power service not available...')
-
-        req = SetBool.Request()
-        req.data = active
-        future = client.call_async(req)
-
-        if active:
-            self.get_logger().info("✅ LDS- und Antriebsmotor aktiviert.")
-        else:
-            self.get_logger().info("🛑 LDS- und Antriebsmotor deaktiviert (Ruhezustand).")
-
 
     # Funktion Handle der Audioaufnahme und Fehleranzeige bei Audioübertragungsfehlern
     def audio_callback(self, indata, frames, time, status):
@@ -155,12 +140,10 @@ class VoiceControlNode(Node):
                 command = result.get("text", "")
                 if command in Valid_Commands:
                     self.get_logger().info(f"Gültiger Befehl erkannt: {command}")
-                    self.set_motor_power(True)
                     self.handle_movement_Command(command)
                 elif command in Valid_point_Commands:
                     self.get_logger().info(f"Ziel Befehl erkannt: {command}")
                     self.navigating = True
-                    self.set_motor_power(True)
                     self.handle_navigation_command(command)
 
 
@@ -187,7 +170,6 @@ class VoiceControlNode(Node):
             self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
             self.get_logger().info(Ausgabe_Befehlsliste)
             self.get_logger().info(Ausagbe_Navigationsbefehle)
-            self.set_motor_power(False)
         else:
             return
         self.pub.publish(self.twist)        # Publishen des Befehls
