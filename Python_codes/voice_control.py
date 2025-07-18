@@ -62,7 +62,7 @@ class VoiceControlNode(Node):
         elif User == "bastian":
             model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-small-de-0.15"
         elif User == "pi":
-            model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Python_code/vosk-model-small-de-0.15"
+            model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Python_codes/vosk-model-small-de-0.15"
 
         def __del__(self):
             self.get_logger().info("VoiceControlNode wird zerstört!")
