@@ -271,9 +271,10 @@ class VoiceControlNode(Node):
             result = self.navigator.getResult() 
         if result == TaskResult.SUCCEEDED:
                 self.get_logger().info("✅ Ziel erfolgreich erreicht.")
-                self.play_sound(2)
+                self.play_sound(1)
         elif result == TaskResult.FAILED:
                 self.get_logger().warn("❌ Navigation fehlgeschlagen.")
+                self.play_sound(2)
         elif result == TaskResult.CANCELED:
                 self.get_logger().warn("⚠️ Navigation wurde abgebrochen.")
 
