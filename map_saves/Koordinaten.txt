@@ -1,3 +1,20 @@
+
+----------H0.093--------
 Tür_Flur = (1.25,3.9)   --> Pixel_k = 127,124
 Tür_Labor =(-6.1,-0.95) --> (80,221)
 Wand neben Tisch_links = (-0.9,-1.8)   --> (184,238)
+----------------------------------------------------------
+
+---------komplettes Labor mit Flur----------
+
+                              Welt_koord.             Pixel
+Vordere_Eingangstür_Labor   = (20.8,-2.1)       --> (618,244)
+Mittlere_Eingangstür_Labor  = (8.35,-2.05)      --> (369,243)
+Hintere_Eingangstür_Labor   = (0.6,-2.25)       --> (214,247)
+Stellplatz_in_H0.093        = (6.5,-2.75)       --> (332,257)
+Startposition_in_H0.093     = (2.3,-3.7)        --> (248,276)
+Flur_Anfang                 = (20.85,-0.2)      --> (619,206)
+Flur_Mitte                  = (9.25,-0.45)      --> (387,211)
+Flur_Ende                   = (-6.75,-0.2)      --> ( 67,206)
+Büro_Eingang_im_Labor       = (21,-7.1)         --> (622,344)
+Vor_die_Couch               = (8.9,-4.05)       --> (380,283)
