@@ -15,7 +15,6 @@ import numpy as np  # type: ignore
 import math
 import time
 import threading
-import difflib
 
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult  # type: ignore
 from geometry_msgs.msg import PoseStamped  # type: ignore
@@ -62,7 +61,7 @@ class VoiceControlNode(Node):
         elif User == "bastian":
             model_path = r"/home/basti/Schreibtisch/Turtlebot/Voicecontrol/vosk-model-small-de-0.15"
         elif User == "pi":
-            model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Python_codes/vosk-model-small-de-0.15"
+            model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Voicecontrol/vosk-model-small-de-0.15"
 
         def __del__(self):
             self.get_logger().info("VoiceControlNode wird zerstört!")
@@ -153,13 +152,6 @@ class VoiceControlNode(Node):
                     self.get_logger().info(f"Ziel Befehl erkannt: {command}")
                     self.navigating = True
                     self.handle_navigation_command(command)
-                else:
-                    # Unscharfer Vergleich für Navigationsziele
-                    similar_nav = difflib.get_close_matches(command, Valid_point_Commands, n=1, cutoff=0.7)
-                    if similar_nav:
-                        self.get_logger().warn(f"Unscharfes Ziel erkannt: {command} -> {similar_nav[0]}")
-                        self.navigating = True
-                        self.handle_navigation_command(similar_nav[0])
 
 
     # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
@@ -310,5 +302,4 @@ class VoiceControlNode(Node):
         quat.z = qz
         quat.w = qw
         return quat
-
 
