@@ -41,11 +41,11 @@ class DirectionState(Enum):
 
 # Erlaubte Befehle
 Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
-Valid_point_Commands = {"flur", "labor", "stellplatz"}
+Valid_point_Commands = {"eingang vorne", "eingang mitte", "eingang hinten", "stellplatz", "start", "flur anfang", "flur mitte", "flur ende", "eingang büro", "sofa"}
 
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
-Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Flur, Labor, Stellplatz\n"
+Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Eingang vorne, Eingang mitte , Eingang hinten, Stellplatz, Start, Flur Anfang, Flur mitte, Flur ende, Eingang büro, sofa\n"
 
 
 
@@ -74,9 +74,17 @@ class VoiceControlNode(Node):
         self.navigating = False
 
         self.waypoints_list = {
-            "flur": (1.25, 3.9),
-            "labor": (-6.1, -0.95),
-            "stellplatz": (-0.9, -1.8)
+           # "flur": (1.25, 3.9),
+             "eingang vorne": (20.8, -2.1),
+             "eingang mitte": (8.35, -2.05),
+             "eingang hinten": (0.6, -2.25),
+             "stellplatz": (6.5, -2.75),
+             "start": (2.3, -3.7),
+             "flur anfang": (20.85, -0.2),
+             "flur mitte": (9.25, -0.45),
+             "flur ende": (-6.75, -0.2),
+             "eingang büro": (21, -7.1),
+             "sofa": (8.9, -4.05),
         }
         
         # Grad in Radiant für orientation_list
@@ -85,9 +93,18 @@ class VoiceControlNode(Node):
         # 180° -> 3.14
         # 270° -> 4.71
         self.orientation_list = {
-            "flur": 1.57,   # 90° in Radiant
-            "labor": 0.0,
-            "stellplatz": 0.0
+           # "flur": 1.57,   # 90° in Radiant
+             "eingang vorne": 3.14 ,
+             "eingang mitte": 3.14 ,
+             "eingang hinten": 3.14 ,
+             "stellplatz": 1.57 ,
+             "start": 4.71 ,
+             "flur anfang": 1.57 ,
+             "flur mitte": 1.57 ,
+             "flur ende": 4.71 ,
+             "eingang büro": 1.57 ,
+             "sofa": 4.71
+
         }
 
         self.sound_client = self.create_client(Sound, '/sound')
