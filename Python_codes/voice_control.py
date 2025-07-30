@@ -168,6 +168,7 @@ class VoiceControlNode(Node):
                 elif command in Valid_point_Commands:
                     self.get_logger().info(f"Ziel Befehl erkannt: {command}")
                     self.navigating = True
+                    self.play_sound(3)
                     self.handle_navigation_command(command)
 
 
