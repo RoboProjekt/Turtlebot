@@ -170,6 +170,7 @@ class VoiceControlNode(Node):
                     self.navigating = True
                     self.play_sound(3)
                     self.handle_navigation_command(command)
+                
 
 
     # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
