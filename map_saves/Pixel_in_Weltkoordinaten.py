@@ -1,9 +1,9 @@
 import imageio
 
 # Konfiguration aus YAML
-origin = [-10.1, -4.3]  # (x, y)
+origin = [-12.4, -9.73]  # (x, y)
 resolution = 0.05  # m/pixel
-image_path = "/home/andy/turtlebot3_ws/map_saves/H0.093.pgm"
+image_path = "/home/andy/turtlebot3_ws/map_saves/komplettes_Labor_mit_Flur.pgm"
 
 x_Pixel = int(input("Bitte x_Pixel eingeben eingeben: "))
 y_Pixel = int(input("Bitte y_Pixel eingeben: "))

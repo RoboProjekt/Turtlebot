@@ -78,7 +78,7 @@ class VoiceControlNode(Node):
              "eingang vorne": (20.8, -2.1),
              "eingang mitte": (8.35, -2.05),
              "eingang hinten": (0.6, -2.25),
-             "stellplatz": (6.5, -2.75),
+             "stellplatz": (4.2, 1.07),
              "start": (2.3, -3.7),
              "flur anfang": (20.85, -0.2),
              "flur mitte": (9.25, -0.45),
