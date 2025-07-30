@@ -21,8 +21,8 @@ from geometry_msgs.msg import PoseStamped  # type: ignore
 from geometry_msgs.msg import Quaternion  # type: ignore
 
 # Eingragen wer den Code gerade benutzt
-User = "pi"                               # andy oder bastian
-samplerate_number = 16000                   # 16000 für NUtzung auf pi sonst 44100
+User = "andy"                               # andy oder bastian
+samplerate_number = 16000                   
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
 Timer_callback_Aufrufsintervall = 0.01
