@@ -75,16 +75,16 @@ class VoiceControlNode(Node):
 
         self.waypoints_list = {
            # "flur": (1.25, 3.9),
-             "eingang vorne": (20.8, -2.1),
-             "eingang mitte": (8.35, -2.05),
-             "eingang hinten": (0.6, -2.25),
+             "eingang vorne": (18.5,1.72),
+             "eingang mitte": (6.05, 1.77),
+             "eingang hinten": (-1.7, 1.57),
              "stellplatz": (4.2, 1.07),
-             "start": (2.3, -3.7),
-             "flur anfang": (20.85, -0.2),
-             "flur mitte": (9.25, -0.45),
-             "flur ende": (-6.75, -0.2),
-             "eingang büro": (21, -7.1),
-             "sofa": (8.9, -4.05),
+             "start": (0.0, 0.0),
+             "flur anfang": (18.55, 3.62),
+             "flur mitte": (6.95, 3.37),
+             "flur ende": (-9.05, 3.62),
+             "eingang büro": (18.7, -3.28),
+             "sofa": (6.6, -0.23),
         }
         
         # Grad in Radiant für orientation_list
@@ -94,16 +94,16 @@ class VoiceControlNode(Node):
         # 270° -> 4.71
         self.orientation_list = {
            # "flur": 1.57,   # 90° in Radiant
-             "eingang vorne": 3.14 ,
-             "eingang mitte": 3.14 ,
-             "eingang hinten": 3.14 ,
+             "eingang vorne": 4.71 ,
+             "eingang mitte": 4.71 ,
+             "eingang hinten": 4.71 ,
              "stellplatz": 3.14 ,
-             "start": 4.71 ,
-             "flur anfang": 1.57 ,
-             "flur mitte": 1.57 ,
-             "flur ende": 4.71 ,
-             "eingang büro": 1.57 ,
-             "sofa": 4.71
+             "start": 0.00 ,
+             "flur anfang": 3.14 ,
+             "flur mitte": 3.14 ,
+             "flur ende": 0.00 ,
+             "eingang büro": 3.14 ,
+             "sofa": 0.00
 
         }
 
