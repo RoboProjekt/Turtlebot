@@ -5,7 +5,7 @@ origin = [-12.4, -9.73]  # (x, y)
 resolution = 0.05  # m/pixel
 image_path = "/home/andy/turtlebot3_ws/map_saves/komplettes_Labor_mit_Flur.pgm"
 
-x_Pixel = int(input("Bitte x_Pixel eingeben eingeben: "))
+x_Pixel = int(input("Bitte x_Pixel eingeben: "))
 y_Pixel = int(input("Bitte y_Pixel eingeben: "))
 
 # Bildgröße ermitteln

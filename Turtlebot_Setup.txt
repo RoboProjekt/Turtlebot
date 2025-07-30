@@ -114,7 +114,7 @@
 	LIVESTREAM DURCH PI KAMERA
 	-sudo apt install mjpg-streamer
 	-cd ~/mjpg_streamer/src/mjpg-streamer/mjpg-streamer-experimental
-	./mjpg_streamer -i "./input_uvc.so -d /dev/video0 -r 640x480 -f 15" -o "./output_http.so -p 8080 -w ./www"
+	./mjpg_streamer -i "./input_uvc.so -d /dev/video0 -r 640x480 -f 30" -o "./output_http.so -p 8080 -w ./www"
 	Auf PC/Browser: "pi.ip.adresse:8080" (bei uns: "192.168.1.116:8080")
 	
 	ROS2 KAMERA AKTIVIEREN
