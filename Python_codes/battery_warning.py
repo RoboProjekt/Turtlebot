@@ -1,8 +1,8 @@
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import Float32
-from sensor_msgs.msg import BatteryState
-from turtlebot3_msgs.srv import Sound
+import rclpy                                # type:ignore
+from rclpy.node import Node                 # type:ignore
+from std_msgs.msg import Float32            # type:ignore
+from sensor_msgs.msg import BatteryState    # type:ignore
+from turtlebot3_msgs.srv import Sound       # type:ignore
 import time
 
 
