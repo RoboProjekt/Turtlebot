@@ -25,7 +25,7 @@ from std_msgs.msg import String  # type: ignore
 #IMPORT MESSAGE STRING FOR YOLO CHECK
 
 # Eingragen wer den Code gerade benutzt
-User = "andy"                               # andy oder bastian
+User = "pi"                               # andy oder bastian oder pi
 samplerate_number = 16000                   
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
