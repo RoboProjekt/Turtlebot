@@ -236,6 +236,9 @@ class VoiceControlNodeBasti(Node):
     # Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
     # Neuer Aufruf sobald neuer LIDAR Scan empfangen wurde
     def scan_callback(self, msg):
+
+        self.latest_scan = msg # Abspeichern Scan für yolo_callback
+
         num_ranges = len(msg.ranges)
 
         front_center = num_ranges   # Beobachtet bei 360 Grad, sprich vorne
