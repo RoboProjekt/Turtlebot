@@ -11,7 +11,7 @@ class BatteryMonitor(Node):
         super().__init__('battery_monitor')
 
         # Parameter
-        self.warning_threshold = 0.2  # 20 %
+        self.warning_threshold = 0.5  # 50 %
         self.warning_interval = 120   # alle 120 s
         self.last_warning_time = 0.0
 
