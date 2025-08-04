@@ -25,7 +25,7 @@ from std_msgs.msg import String  # type: ignore
 #IMPORT MESSAGE STRING FOR YOLO CHECK
 
 # Eingragen wer den Code gerade benutzt
-User = "pi"                               # andy oder bastian
+User = "andy"                               # andy oder bastian
 samplerate_number = 16000                   
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
@@ -189,11 +189,8 @@ class VoiceControlNodeBasti(Node):
                     self.handle_navigation_command(command)
                     #
                 #NEW FOR DOOR LIST OF PREVIOUSLY UNKNOWN DOORS
-                elif command.startswith("tür "):
-                    self.handle_navigation_command(command)
-
-                elif command not in Valid_point_Commands:
-                    self.get_logger().info(f"Erkannt: {command}")
+             #   elif command.startswith("tür "):
+             #       self.handle_navigation_command(command)
                 
 
 
@@ -229,10 +226,12 @@ class VoiceControlNodeBasti(Node):
     #NEW FUNCTION TO WORK WITH NEW LIST MANAGEMENT
     def handle_navigation_command(self, ziel_name):
         if ziel_name in self.waypoints:
-            x, y, yaw = self.waypoints.get(ziel_name)
+            ziel = self.waypoints.get(ziel_name)
+
+            if ziel:
+                x ,y , yaw = ziel
             self.navigate_to_pose(x, y, yaw)
-        else:
-            self.get_logger().warn(f"\nUnbekanntes Ziel: {ziel_name}\n")
+        
 
     # Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
     # Neuer Aufruf sobald neuer LIDAR Scan empfangen wurde

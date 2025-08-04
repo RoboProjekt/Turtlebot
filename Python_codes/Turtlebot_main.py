@@ -11,7 +11,7 @@ def main(args=None):
     rclpy.init(args=args)
 
     # Nodes initialisieren
-    voice_node = VoiceControlNode()
+    #voice_node = VoiceControlNode()
     voice_node_basti = VoiceControlNodeBasti()
     battery_warning = BatteryMonitor()
     # object_detect_node = YoloPublisher()
@@ -20,7 +20,7 @@ def main(args=None):
     executor = MultiThreadedExecutor()
     executor.add_node(battery_warning)
     #executor.add_node(voice_node)
-    executor.add_node(voice_node_basti)w
+    executor.add_node(voice_node_basti)
     # executor.add_node(object_detect_node)
 
     try:
@@ -29,7 +29,7 @@ def main(args=None):
         pass
     finally:
         executor.shutdown()
-        voice_node.destroy_node()
+        #voice_node.destroy_node()
         voice_node_basti.destroy_node()
         battery_warning.destroy_node()
         # object_detect_node.destroy_node()
