@@ -23,8 +23,8 @@ class YoloPublisher(Node):
         self.get_logger().info('YOLO Detection gestartet...')
         self.read_darknet_output()
 
-        #def __del__(self):
-         #   self.get_logger().info("YoloPublisher wird zerstört!")
+        def __del__(self):
+            self.get_logger().info("YoloPublisher wird zerstört!")
 
     def read_darknet_output(self):
         pattern = re.compile(r"(\w+): (\d+)%")  # z.B. "door: 78%"
@@ -39,4 +39,17 @@ class YoloPublisher(Node):
                     self.publisher_.publish(ros_msg)
                     self.get_logger().info(f'Gesendet: {msg}')
 
+def main(args=None):
+    rclpy.init(args=args)
+    node = YoloPublisher()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info('Node beendet')
+    finally:
+        node.process.terminate()
+        node.destroy_node()
+        rclpy.shutdown()
 
+if __name__ == '__main__':
+    main()
