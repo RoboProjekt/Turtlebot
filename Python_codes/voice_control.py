@@ -170,6 +170,8 @@ class VoiceControlNode(Node):
                     self.navigating = True
                     self.play_sound(3)
                     self.handle_navigation_command(command)
+                elif command not in Valid_point_Commands:
+                    self.get_logger(f"Erkannt: {command}")
                 
 
 
