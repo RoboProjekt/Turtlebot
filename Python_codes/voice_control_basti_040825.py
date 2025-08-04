@@ -229,7 +229,7 @@ class VoiceControlNodeBasti(Node):
     #NEW FUNCTION TO WORK WITH NEW LIST MANAGEMENT
     def handle_navigation_command(self, ziel_name):
         if ziel_name in self.waypoints:
-            x, y, yaw = self.waypoints[ziel_name]
+            x, y, yaw = self.waypoints.get(ziel_name)
             self.navigate_to_pose(x, y, yaw)
         else:
             self.get_logger().warn(f"\nUnbekanntes Ziel: {ziel_name}\n")
