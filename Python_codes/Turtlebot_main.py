@@ -16,8 +16,8 @@ def main(args=None):
 
     # Multi-Threaded-Executor für parallele Verarbeitung
     executor = MultiThreadedExecutor()
-    executor.add_node(voice_node)
     executor.add_node(battery_warning)
+    executor.add_node(voice_node)
     # executor.add_node(object_detect_node)
 
     try:
