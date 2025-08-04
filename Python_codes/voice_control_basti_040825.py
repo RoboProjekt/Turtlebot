@@ -325,14 +325,14 @@ class VoiceControlNodeBasti(Node):
         return min(valid) if valid else float('nan')
 
     def _calc_global_position(self, dist: float):
-        pose = self.navigator.get_current_pose()
+        pose = self.navigator.get_pose()
         q = pose.pose.orientation
         yaw = math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
         x0,y0 = pose.pose.position.x, pose.pose.position.y
         return x0 + dist*math.cos(yaw), y0 + dist*math.sin(yaw)
 
     def _get_current_yaw(self):
-        pose = self.navigator.get_current_pose()
+        pose = self.navigator.get_pose()
         q = pose.pose.orientation
         return math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
     #END OF YOLO INTEGRATION
