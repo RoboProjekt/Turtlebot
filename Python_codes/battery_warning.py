@@ -28,6 +28,9 @@ class BatteryMonitor(Node):
             10
         )
 
+        self.get_logger().info('🔋 BatteryMonitor-Node gestartet.')
+
+
         # Timer für regelmäßige Statusausgabe (alle 300 Sekunden = 5 Minuten)
         self.status_timer = self.create_timer(
             300.0,
