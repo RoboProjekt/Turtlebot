@@ -23,8 +23,8 @@ class YoloPublisher(Node):
         self.get_logger().info('YOLO Detection gestartet...')
         self.read_darknet_output()
 
-      #  def __del__(self):
-      #      self.get_logger().info("YoloPublisher wird zerstört!")
+        def __del__(self):
+            self.get_logger().info("YoloPublisher wird zerstört!")
 
     def read_darknet_output(self):
         pattern = re.compile(r"(\w+): (\d+)%")  # z.B. "door: 78%"
