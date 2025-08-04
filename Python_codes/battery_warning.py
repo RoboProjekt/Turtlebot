@@ -10,7 +10,7 @@ class BatteryMonitor(Node):
         super().__init__('battery_monitor')
 
         # Schwelle für Warnung
-        self.warning_threshold = 0.5  # 50 %
+        self.warning_threshold = 0.2  # 20 %
         self.warning_interval = 120   # alle 120 s
         self.last_warning_time = 0.0
 
@@ -31,9 +31,9 @@ class BatteryMonitor(Node):
         self.get_logger().info('🔋 BatteryMonitor-Node gestartet.')
 
 
-        # Timer für regelmäßige Statusausgabe (alle 60s)
+        # Timer für regelmäßige Statusausgabe (alle 180s)
         self.status_timer = self.create_timer(
-            60,
+            180,
             self.status_output_callback
         )
 
@@ -54,7 +54,7 @@ class BatteryMonitor(Node):
 
     def status_output_callback(self):
         if self.last_percentage is not None:
-            self.get_logger().info(f'⏱ Regelmäßige Ausgabe: Akkuladung bei {self.last_percentage:.1f}%')
+            self.get_logger().info(f'Momentane Akkuladung bei {self.last_percentage:.1f}%')
         else:
-            self.get_logger().info('⏱ Noch kein Akkustand verfügbar.')
+            self.get_logger().info('Noch kein Akkustand verfügbar.')
 
