@@ -5,7 +5,7 @@ from sensor_msgs.msg import LaserScan  # Für Hinderniserkennung # type: ignore
 from turtlebot3_msgs.srv import Sound #type: ignore
 from rclpy.qos import qos_profile_sensor_data  # type: ignore
 from enum import Enum
-from std_srvs.srv import SetBool
+from std_srvs.srv import SetBool                #type:ignore
 
 import sounddevice as sd  # type: ignore
 import queue
@@ -353,7 +353,7 @@ class VoiceControlNodeBasti(Node):
 
         # Warten bis Navigation abgeschlossen ist
         while not self.navigator.isTaskComplete() and self.navigating == True:
-                time.sleep(0.1)
+                time.sleep(0.8)
 
         if self.navigating:             
             result = self.navigator.getResult() 
