@@ -1,6 +1,6 @@
-import rclpy
-from rclpy.node import Node
-from std_msgs.msg import String
+import rclpy                        #type:ignore
+from rclpy.node import Node         #type:ignore
+from std_msgs.msg import String     #type:ignore
 import subprocess
 import re
 
@@ -23,8 +23,15 @@ class YoloPublisher(Node):
         self.get_logger().info('YOLO Detection gestartet...')
         self.read_darknet_output()
 
-        #def __del__(self):
-         #   self.get_logger().info("YoloPublisher wird zerstört!")
+    def __del__(self):
+        self.get_logger().info("YoloPublisher wird zerstört!")
+        try:
+            # Beende den gesamten Prozess inkl. Forks
+            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+            self.get_logger().info("Darknet-Prozess beendet.")
+        except Exception as e:
+            self.get_logger().warn(f"Fehler beim Beenden von darknet: {e}")
+
 
     def read_darknet_output(self):
         pattern = re.compile(r"(\w+): (\d+)%")  # z.B. "door: 78%"
@@ -39,4 +46,17 @@ class YoloPublisher(Node):
                     self.publisher_.publish(ros_msg)
                     self.get_logger().info(f'Gesendet: {msg}')
 
+def main(args=None):
+    rclpy.init(args=args)
+    node = YoloPublisher()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info('Node beendet')
+    finally:
+        node.process.terminate()
+        node.destroy_node()
+        rclpy.shutdown()
 
+if __name__ == '__main__':
+    main()
