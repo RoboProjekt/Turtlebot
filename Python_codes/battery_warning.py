@@ -37,6 +37,9 @@ class BatteryMonitor(Node):
             self.status_output_callback
         )
 
+        def __del__(self):
+            self.get_logger().info("BateryMonitor wird zerstört!")
+
     def play_sound(self, sound_value=2):
         request = Sound.Request()
         request.value = sound_value
