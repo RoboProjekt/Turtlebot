@@ -31,7 +31,7 @@ class BatteryMonitor(Node):
         self.get_logger().info('🔋 BatteryMonitor-Node gestartet.')
 
 
-        # Timer für regelmäßige Statusausgabe (alle 300 Sekunden = 5 Minuten)
+        # Timer für regelmäßige Statusausgabe (alle 60s)
         self.status_timer = self.create_timer(
             60,
             self.status_output_callback
@@ -54,7 +54,7 @@ class BatteryMonitor(Node):
 
     def status_output_callback(self):
         if self.last_percentage is not None:
-            self.get_logger().info(f'⏱ Regelmäßige Ausgabe: Akkuladung bei {self.last_percentage * 100:.1f}%')
+            self.get_logger().info(f'⏱ Regelmäßige Ausgabe: Akkuladung bei {self.last_percentage:.1f}%')
         else:
             self.get_logger().info('⏱ Noch kein Akkustand verfügbar.')
 
