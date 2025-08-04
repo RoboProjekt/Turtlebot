@@ -25,6 +25,13 @@ class YoloPublisher(Node):
 
     def __del__(self):
         self.get_logger().info("YoloPublisher wird zerstört!")
+        try:
+            # Beende den gesamten Prozess inkl. Forks
+            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+            self.get_logger().info("Darknet-Prozess beendet.")
+        except Exception as e:
+            self.get_logger().warn(f"Fehler beim Beenden von darknet: {e}")
+
 
     def read_darknet_output(self):
         pattern = re.compile(r"(\w+): (\d+)%")  # z.B. "door: 78%"
