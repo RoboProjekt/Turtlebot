@@ -23,6 +23,8 @@ from geometry_msgs.msg import Quaternion  # type: ignore
 #NEW FOR YOLO
 from std_msgs.msg import String  # type: ignore
 #IMPORT MESSAGE STRING FOR YOLO CHECK
+#Neu für current_position
+from tf2_ros import Buffer, TransformListener #, LookupException, ConnectivityException, ExtrapolationException  ->Nur nötig bei Fehlerausgabe
 
 # Eingragen wer den Code gerade benutzt
 User = "pi"                               # andy oder bastian oder pi
@@ -62,6 +64,10 @@ class VoiceControlNodeBasti(Node):
 
         #NEW INCLUDE YOLO OBJECT DETECTION
         self.sub_yolo = self.create_subscription(String, 'yolo_objects', self.yolo_callback, 10)
+
+        #Neuer Subscriber für map und baselink zum Umrechnen in current_position
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
 
         self.waypoints = {
            # "flur": (1.25, 3.9),
@@ -307,6 +313,8 @@ class VoiceControlNodeBasti(Node):
             if not np.isfinite(dist):
                 return
             x,y = self._calc_global_position(dist)
+            if x is None or y is None:  #x und y auf Gültigkeit überprüfen
+                return
             # Prüfen, ob Position schon in waypoints existiert
             for (vx,vy,yaw) in self.waypoints.values():
                 if math.hypot(vx-x, vy-y) < Abstand:
@@ -323,18 +331,55 @@ class VoiceControlNodeBasti(Node):
         window = scan.ranges[mid-Angle_doorscan:mid+Angle_doorscan]     # Angle_doorscan als Winkel in welchem die geringste Distanz zur Tür bestimmt wird
         valid = [r for r in window if np.isfinite(r) and r>0]
         return min(valid) if valid else float('nan')
-
+    """
     def _calc_global_position(self, dist: float):
-        pose = self.navigator.get_pose()
+        pose = self.get_robot_pose_map()
         q = pose.pose.orientation
         yaw = math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
         x0,y0 = pose.pose.position.x, pose.pose.position.y
         return x0 + dist*math.cos(yaw), y0 + dist*math.sin(yaw)
+    """
 
+    def _calc_global_position(self, dist: float):
+        pose = self.get_robot_pose_map()
+        if pose is None:
+            return None, None
+        x0, y0, yaw = pose
+        return x0 + dist * math.cos(yaw), y0 + dist * math.sin(yaw)
+
+    """
     def _get_current_yaw(self):
         pose = self.navigator.get_pose()
         q = pose.pose.orientation
         return math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
+    """
+
+    def _get_current_yaw(self):
+        pose = self.get_robot_pose_map()
+        if pose is None:
+            return None
+        return pose[2]  # yaw
+
+    
+    def get_robot_pose_map(self):
+        try:
+            #now = rclpy.time.Time()
+            now = self.get_clock().now()
+            trans = self.tf_buffer.lookup_transform('map', 'base_footprint', now)
+            # Position
+            x = trans.transform.translation.x
+            y = trans.transform.translation.y
+            # Orientierung (Quaternion → Yaw)
+            q = trans.transform.rotation
+            yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
+            return x, y, yaw
+        #except (LookupException, ConnectivityException, ExtrapolationException) as e:
+            #self.get_logger().warn(f"❗ Fehler beim Abrufen der Roboterpose: {e}")
+            #return None
+        except Exception as e:
+            self.get_logger().warn(f"Fehler beim transformieren: {e}")
+            return None
+
     #END OF YOLO INTEGRATION
 
 
