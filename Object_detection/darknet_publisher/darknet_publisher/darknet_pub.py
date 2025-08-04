@@ -40,6 +40,3 @@ class YoloPublisher(Node):
                     self.get_logger().info(f'Gesendet: {msg}')
 
 
-
-if __name__ == '__main__':
-    main()
