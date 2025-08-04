@@ -21,7 +21,7 @@ from geometry_msgs.msg import PoseStamped  # type: ignore
 from geometry_msgs.msg import Quaternion  # type: ignore
 
 # Eingragen wer den Code gerade benutzt
-User = "andy"                               # andy oder bastian
+User = "pi"                               # andy oder bastian
 samplerate_number = 16000                   
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
@@ -171,7 +171,7 @@ class VoiceControlNode(Node):
                     self.play_sound(3)
                     self.handle_navigation_command(command)
                 elif command not in Valid_point_Commands:
-                    self.get_logger(f"Erkannt: {command}")
+                    self.get_logger().info(f"Erkannt: {command}")
                 
 
 
