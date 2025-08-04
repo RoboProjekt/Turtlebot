@@ -1,27 +1,31 @@
-import rclpy                                #type: ignore
+import rclpy                                        # type: ignore
+from rclpy.executors import MultiThreadedExecutor   #type:ignore
 import sys
 
-# absolute_src_path = '/home/pi/turtlebot_ws/src'    #gilt nur auf PI
-# sys.path.append(absolute_src_path)
-
-from voice_control import VoiceControlNode   #type: ignore
-from battery_warning import BatteryMonitor   #type: ignore
+from voice_control import VoiceControlNode   # type: ignore
+from battery_warning import BatteryMonitor   # type: ignore
 # from darknet_publisher.darknet_pub import YoloPublisher
-
-
 
 def main(args=None):
     rclpy.init(args=args)
+
+    # Nodes initialisieren
     voice_node = VoiceControlNode()
     battery_warning = BatteryMonitor()
     # object_detect_node = YoloPublisher()
+
+    # Multi-Threaded-Executor für parallele Verarbeitung
+    executor = MultiThreadedExecutor()
+    executor.add_node(voice_node)
+    executor.add_node(battery_warning)
+    # executor.add_node(object_detect_node)
+
     try:
-        rclpy.spin(voice_node)
-        rclpy.spin(battery_warning)
-        # rclpy.spin(object_detect_node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        executor.shutdown()
         voice_node.destroy_node()
         battery_warning.destroy_node()
         # object_detect_node.destroy_node()
