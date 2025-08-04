@@ -33,7 +33,7 @@ class BatteryMonitor(Node):
 
         # Timer für regelmäßige Statusausgabe (alle 300 Sekunden = 5 Minuten)
         self.status_timer = self.create_timer(
-            300.0,
+            60,
             self.status_output_callback
         )
 
