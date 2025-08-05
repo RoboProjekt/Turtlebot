@@ -364,7 +364,7 @@ class VoiceControlNodeBasti(Node):
     def get_robot_pose_map(self):
         try:
             #now = rclpy.time.Time()
-            now = self.get_clock().now()
+            now = Time()
             trans = self.tf_buffer.lookup_transform('map', 'base_footprint', now)
             # Position
             x = trans.transform.translation.x
