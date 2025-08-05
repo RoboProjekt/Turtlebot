@@ -27,7 +27,7 @@ from std_msgs.msg import String  # type: ignore
 from tf2_ros import Buffer, TransformListener #, LookupException, ConnectivityException, ExtrapolationException  ->Nur nötig bei Fehlerausgabe
 
 # Eingragen wer den Code gerade benutzt
-User = "pi"                               # andy oder bastian oder pi
+User = "andy"                               # andy oder bastian oder pi
 samplerate_number = 16000                   
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
