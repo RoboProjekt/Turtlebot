@@ -196,8 +196,8 @@ class VoiceControlNodeBasti(Node):
                     self.handle_navigation_command(command)
                     #
                 #NEW FOR DOOR LIST OF PREVIOUSLY UNKNOWN DOORS
-             #   elif command.startswith("tür "):
-             #       self.handle_navigation_command(command)
+                elif command.startswith("tür "):
+                    self.handle_navigation_command(command)
                 
 
 
@@ -228,7 +228,6 @@ class VoiceControlNodeBasti(Node):
             return
         self.pub.publish(self.twist)        # Publishen des Befehls
 
-    # Funktion zur Zielnavigationssteuerung des Roboters
     # Funktion zur Zielnavigationssteuerung des Roboters
     #NEW FUNCTION TO WORK WITH NEW LIST MANAGEMENT
     def handle_navigation_command(self, ziel_name):
@@ -332,14 +331,6 @@ class VoiceControlNodeBasti(Node):
         window = scan.ranges[mid-Angle_doorscan:mid+Angle_doorscan]     # Angle_doorscan als Winkel in welchem die geringste Distanz zur Tür bestimmt wird
         valid = [r for r in window if np.isfinite(r) and r>0]
         return min(valid) if valid else float('nan')
-    """
-    def _calc_global_position(self, dist: float):
-        pose = self.get_robot_pose_map()
-        q = pose.pose.orientation
-        yaw = math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
-        x0,y0 = pose.pose.position.x, pose.pose.position.y
-        return x0 + dist*math.cos(yaw), y0 + dist*math.sin(yaw)
-    """
 
     def _calc_global_position(self, dist: float):
         pose = self.get_robot_pose_map()
@@ -348,12 +339,6 @@ class VoiceControlNodeBasti(Node):
         x0, y0, yaw = pose
         return x0 + dist * math.cos(yaw), y0 + dist * math.sin(yaw)
 
-    """
-    def _get_current_yaw(self):
-        pose = self.navigator.get_pose()
-        q = pose.pose.orientation
-        return math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))
-    """
 
     def _get_current_yaw(self):
         pose = self.get_robot_pose_map()
@@ -374,9 +359,7 @@ class VoiceControlNodeBasti(Node):
             q = trans.transform.rotation
             yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
             return x, y, yaw
-        #except (LookupException, ConnectivityException, ExtrapolationException) as e:
-            #self.get_logger().warn(f"❗ Fehler beim Abrufen der Roboterpose: {e}")
-            #return None
+        
         except Exception as e:
             self.get_logger().warn(f"Fehler beim transformieren: {e}")
             return None
