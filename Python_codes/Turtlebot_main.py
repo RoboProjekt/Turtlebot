@@ -2,7 +2,7 @@ import rclpy                                        # type: ignore
 from rclpy.executors import MultiThreadedExecutor   #type:ignore
 import sys
 
-from voice_control_basti_040825 import VoiceControlNodeBasti #type:ignore
+from voice_control import VoiceControlNode #type:ignore
 from battery_warning import BatteryMonitor   # type: ignore
 
 
@@ -10,13 +10,13 @@ def main(args=None):
     rclpy.init(args=args)
 
     # Nodes initialisieren
-    voice_node_basti = VoiceControlNodeBasti()
+    voice_node = VoiceControlNode()
     battery_warning = BatteryMonitor()
 
     # Multi-Threaded-Executor für parallele Verarbeitung
     executor = MultiThreadedExecutor()
     executor.add_node(battery_warning)
-    executor.add_node(voice_node_basti)
+    executor.add_node(voice_node)
 
     try:
         executor.spin()
@@ -24,7 +24,7 @@ def main(args=None):
         pass
     finally:
         executor.shutdown()
-        voice_node_basti.destroy_node()
+        voice_node.destroy_node()
         battery_warning.destroy_node()
         rclpy.shutdown()
 
