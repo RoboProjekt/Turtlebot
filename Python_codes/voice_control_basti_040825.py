@@ -25,6 +25,7 @@ from std_msgs.msg import String  # type: ignore
 #IMPORT MESSAGE STRING FOR YOLO CHECK
 #Neu für current_position
 from tf2_ros import Buffer, TransformListener #, LookupException, ConnectivityException, ExtrapolationException  ->Nur nötig bei Fehlerausgabe
+from rclpy.time import Time
 
 # Eingragen wer den Code gerade benutzt
 User = "andy"                               # andy oder bastian oder pi
