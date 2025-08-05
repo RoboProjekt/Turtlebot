@@ -25,6 +25,7 @@ class BatteryMonitor(Node):
 
         self.get_logger().info('🔋 BatteryMonitor-Node gestartet.')
 
+
         # Timer für regelmäßige Statusausgabe (alle 180s)
         self.status_timer = self.create_timer(
             180,
@@ -39,6 +40,10 @@ class BatteryMonitor(Node):
         request.value = sound_value
         future = self.sound_client.call_async(request)
 
+    def battery_callback(self, msg: BatteryState):
+        percentage = msg.percentage
+        self.last_percentage = percentage
+        now = time.time()
 
     def status_output_callback(self):
         if self.last_percentage is not None:
