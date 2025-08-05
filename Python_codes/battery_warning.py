@@ -9,11 +9,6 @@ class BatteryMonitor(Node):
     def __init__(self):
         super().__init__('battery_monitor')
 
-        # Schwelle für Warnung
-        self.warning_threshold = 0.2  # 20 %
-        self.warning_interval = 120   # alle 120 s
-        self.last_warning_time = 0.0
-
         # Letzter bekannter Akkustand
         self.last_percentage = None
 
@@ -30,34 +25,24 @@ class BatteryMonitor(Node):
 
         self.get_logger().info('🔋 BatteryMonitor-Node gestartet.')
 
-
         # Timer für regelmäßige Statusausgabe (alle 180s)
         self.status_timer = self.create_timer(
             180,
             self.status_output_callback
         )
 
-        def __del__(self):
+    def __del__(self):
             self.get_logger().info("BateryMonitor wird zerstört!")
 
     def play_sound(self, sound_value=2):
         request = Sound.Request()
         request.value = sound_value
-        self.sound_client.call_async(request)
+        future = self.sound_client.call_async(request)
 
-    def battery_callback(self, msg: BatteryState):
-        percentage = msg.percentage
-        self.last_percentage = percentage
-        now = time.time()
-
-        if percentage < self.warning_threshold and now - self.last_warning_time > self.warning_interval:
-            self.get_logger().warn('🔋 Akku fast leer! Warnung wird ausgegeben.')
-            self.play_sound(3)
-            self.last_warning_time = now
 
     def status_output_callback(self):
         if self.last_percentage is not None:
-            self.get_logger().info(f'Momentane Akkuladung bei {self.last_percentage:.1f}%')
+            self.get_logger().info(f'Momentane Akkuladung bei 🔋 {self.last_percentage:.1f}%')
         else:
             self.get_logger().info('Noch kein Akkustand verfügbar.')
 
