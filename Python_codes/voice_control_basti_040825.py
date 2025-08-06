@@ -28,7 +28,7 @@ from tf2_ros import Buffer, TransformListener #, LookupException, ConnectivityEx
 from rclpy.time import Time
 
 # Eingragen wer den Code gerade benutzt
-User = "andy"                               # andy oder bastian oder pi
+User = "bastian"                               # andy oder bastian oder pi
 samplerate_number = 16000                   
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
