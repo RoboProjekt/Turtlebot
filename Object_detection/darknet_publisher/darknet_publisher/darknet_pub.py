@@ -3,6 +3,8 @@ from rclpy.node import Node         #type:ignore
 from std_msgs.msg import String     #type:ignore
 import subprocess
 import re
+import os
+import subprocess
 
 class YoloPublisher(Node):
     def __init__(self):
@@ -10,10 +12,21 @@ class YoloPublisher(Node):
         self.publisher_ = self.create_publisher(String, 'yolo_objects', 10)
 
         # Starte Darknet als Subprozess
+
+	# Pfad zur darknet-Binary im Home-Verzeichnis auflösen
+        darknet_bin = os.path.expanduser('~/darknet/darknet')
+        obj_data   = os.path.expanduser('~/darknet/data/yolo-aiv2/obj.data')
+        cfg        = os.path.expanduser('~/darknet/data/yolo-aiv2/yolov4-tiny-custom.cfg')
+        weights    = os.path.expanduser('~/darknet/data/yolo-aiv2/yolov4-tiny-custom_best.weights')
+
         self.process = subprocess.Popen(
-            ['home/pi/darknet/darknet', 'detector', 'demo', 'data/yolo-aiv2/obj.data',
-             'data/yolo-aiv2/yolov4-tiny-custom.cfg', 'data/yolo-aiv2/yolov4-tiny-custom_best.weights',
-             '-c', '0', '-thresh', '0.7'],
+            [darknet_bin,
+             'detector', 'demo',
+             obj_data,
+             cfg,
+             weights,
+             '-c', '0',
+             '-thresh', '0.7'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
