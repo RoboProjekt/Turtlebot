@@ -9,6 +9,7 @@ from turtlebot3_msgs.srv import Sound #type: ignore
 from std_msgs.msg import String  # type: ignore
 from geometry_msgs.msg import PoseStamped  # type: ignore
 from geometry_msgs.msg import Quaternion  # type: ignore
+from typing import Optional, Tuple
 
 from enum import Enum
 from std_srvs.srv import SetBool                #type:ignore
@@ -29,7 +30,7 @@ import re
 
 # Variablen für Funktionen
 Abstand = 0.5                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
-Timer_callback_Aufrufsintervall = 0.02
+Timer_callback_Aufrufsintervall = 0.01
 Angle = 10                                  # gescannter Winkel in Grad
 Angle_doorscan = 2                          # gescannter Winkel für Türerkennung
 tracking_radius = 1                         #radius für start/endposition wand tracking
@@ -84,6 +85,8 @@ class YoloDetector(Node):
         self.min_distance_right = float('inf')
         self.current_pose = None
 
+        self.start_pose: Optional[Tuple[float, float, float]] = None    #start_pose initialisieren als None
+
         self.navigator = BasicNavigator()
 
         self.navigator.waitUntilNav2Active()
@@ -95,7 +98,7 @@ class YoloDetector(Node):
 
         self.sound_client = self.create_client(Sound, '/sound')
 
-        self.q = queue.Queue()
+        self.command_queue = queue.Queue()
         self.twist = Twist()
 
         # Hinderniserkennung
@@ -115,6 +118,48 @@ class YoloDetector(Node):
 
     def timer_callback(self):
         self.current_pose = self.get_robot_pose_map()
+        #Neu für queue Abarbeitung ##############################
+        if not self.working and not self.command_queue.empty():
+            cmd = self.command_queue.get()
+            if cmd == "wand tracking":
+                self.command_queue.task_done()
+                self.tracking_active = True
+                self.working = True
+                self.get_logger().info("Starte Wand-Tracking")
+            elif cmd in self.waypoints:
+                self.command_queue.task_done()
+                self.working = True
+                x, y, yaw = self.waypoints.get(cmd)
+                self.navigate_to_pose(x, y, yaw)
+            else:
+                self.command_queue.task_done()
+                self.get_logger().warn(f"Ungültiger Befehl: {cmd}")
+         #3) Falls Tracking aktiv, Aufruf der Tracking-Logik
+        if self.working and self.tracking_active:
+            self.tracking()
+        #######################################################
+                
+    
+    def navigate_to_pose(self, x, y, yaw):
+        q = self.euler_to_quaternion(0, 0, yaw)
+        goal = PoseStamped()
+        goal.header.frame_id = 'map'
+        goal.header.stamp = self.get_clock().now().to_msg()
+        goal.pose.position.x = x
+        goal.pose.position.y = y
+        goal.pose.orientation = q
+
+        self.get_logger().info(f"Navigiere zu: x={x:.2f}, y={y:.2f}, yaw={yaw:.2f}")
+        result = self.navigator.goToPose(goal)
+
+        if result == TaskResult.SUCCEEDED:
+            self.get_logger().info("✅ Ziel erreicht")
+            self.play_sound(1)
+        else:
+            self.get_logger().warn("❌ Navigation nicht erfolgreich")
+            self.play_sound(2)
+
+        self.working = False
 
 
     def play_sound(self, sound_value=2):
@@ -124,38 +169,29 @@ class YoloDetector(Node):
 
 
     def output_commands(self):
-        self.get_logger().info("\nGültige Befehle: \nWand tracking\n")
-
+        self.get_logger().info("\nGültige Befehle: \nWand tracking")
         for i, name in enumerate(self.waypoints.keys(), start=1):
             self.get_logger().info(f"{i}: {name}")
-
-
-    #Kommandozeilen Verarbeitung
-    def detect_command(self):
-        if not self.working:
-            self.output_commands()
-            eingabe = input("\nBefehl: ").strip().lower()
-            if eingabe == "wand tracking":
-                self.get_logger().info(f"Gültiger Befehl erkannt: {eingabe}")
-                self.tracking_active = True
-                self.working = True
-            elif eingabe in self.waypoints:
-                self.get_logger().info(f"Gültiger Befehl erkannt: {eingabe}")
-                self.navigating = True
-                self.working = True
-                self.handle_navigation_command(eingabe)
-                self.working = False
-            else:
-                self.get_logger().warn(f"Ungültiger Befehl: {eingabe}")
-                self.working = False
-
+        #cmd = input("Befehl: ").strip().lower()
+        #self.command_queue.put(cmd) #EINGEGEBENE BEFEHLE WERDEN NUR NACH INITIALSTART AUSGEFÜHRT -> Liste scheint probleme zu machen
 
     def command_loop(self):
         while rclpy.ok():
-            if not self.working:
-                self.detect_command()   # blockiert hier, aber ROS spin läuft weiter
+            if not self.working :
+                self.output_commands()
+                cmd = input("Befehl: ").strip().lower()
+                self.command_queue.put(cmd)
+                #EINGEGEBENE BEFEHLE WERDEN NUR NACH INITIALSTART AUSGEFÜHRT -> Liste scheint probleme zu machen
+                #Stattdessen wird self.output_commands() ausgeführt, die Abfrage von cmd = input wird auch gemacht
+                #Aber scheinbar wird die liste nicht richtig verarbeitet
+
+                #WAND TRACKING NOCH UNGETESTET
             time.sleep(0.1)
 
+
+
+
+    """
     #WAND VERFOLGUNG
     def tracking(self):
 
@@ -208,21 +244,95 @@ class YoloDetector(Node):
                     self.twist.angular.z = 0.0
 
         self.pub.publish(self.twist)
+    """
+    """
+    def tracking(self):
+        if self.current_pose is None:
+            return
+
+        # Startpunkt merken
+        if self.start_pose == None and self.min_distance_front <= Abstand:
+            self.start_pose = self.current_pose
+            self.get_logger().info(f"Start-Pose gesetzt: x={self.start_pose[0]:.2f}, y={self.start_pose[1]:.2f}")
+            return
+
+        # Distanz zurück zum Start
+        dx = self.current_pose[0] - self.start_pose[0]
+        dy = self.current_pose[1] - self.start_pose[1]
+        if math.hypot(dx, dy) <= tracking_radius:
+            self.get_logger().info("Zurück am Startpunkt. Tracking endet.")
+            self.start_pose = None
+            self.tracking_active = False
+            self.working = False
+            self.play_sound(1)
+            return
+
+        # Wand folgen
+        twist = Twist()
+        if self.min_distance_front > Abstand:
+            twist.linear.x = 0.3
+        else:
+            # wenn Front dicht, nach links drehen
+            twist.angular.z = 0.3 if self.min_distance_left > Abstand else -0.3
+
+        self.pub.publish(twist)
+
+        """
+    def tracking(self):
+        if self.current_pose is None:
+            return
+
+        # --- 1. Startpunkt merken ---
+        if self.start_pose is None and self.min_distance_front <= Abstand:
+            self.start_pose = self.current_pose
+            self.get_logger().info(
+                f"Start-Pose gesetzt: x={self.start_pose[0]:.2f}, y={self.start_pose[1]:.2f}"
+            )
+            return
+
+        # --- 2. Prüfen, ob Startpunkt wieder erreicht wurde ---
+        dx = self.current_pose[0] - self.start_pose[0]
+        dy = self.current_pose[1] - self.start_pose[1]
+        if math.hypot(dx, dy) <= tracking_radius:
+            self.get_logger().info("Zurück am Startpunkt. Tracking endet.")
+            self.start_pose = None
+            self.tracking_active = False
+            self.working = False
+            self.play_sound(1)
+            return
+
+        twist = Twist()
+
+        # --- 3. Hindernis direkt vorne: Nur nach rechts drehen, bis Front und Links frei sind ---
+        if self.min_distance_front < Abstand or self.min_distance_left < Abstand:
+            twist.linear.x = 0.0
+            twist.angular.z = -0.5  # Rechtsdrehung
+            self.pub.publish(twist)
+            return
+
+        # --- 4. Normaler Wall-Following: PD-Regelung auf linken Abstand ---
+        error = self.min_distance_left - Abstand
+        kP = 1.0
+
+        twist.linear.x = 0.2
+        twist.angular.z = -kP * error
+        self.pub.publish(twist)
 
 
-    #Funktion zum wiederholten Aufruf von tracking
-    def tracking_loop(self):
-        if self.working and self.tracking_active:
-            self.tracking()
-    
-    # Funktion zur Zielnavigationssteuerung des Roboters
-    def handle_navigation_command(self, ziel_name):
-        if ziel_name in self.waypoints:
-            ziel = self.waypoints.get(ziel_name)
 
-            if ziel:
-                x ,y , yaw = ziel
-            self.navigate_to_pose(x, y, yaw)
+        #Funktion zum wiederholten Aufruf von tracking
+        def tracking_loop(self):
+            if self.working and self.tracking_active:
+                self.tracking()
+        
+        # Funktion zur Zielnavigationssteuerung des Roboters
+        def handle_navigation_command(self, ziel_name):
+            if ziel_name in self.waypoints:
+                ziel = self.waypoints.get(ziel_name)
+
+                if ziel:
+                    x ,y , yaw = ziel
+                self.navigate_to_pose(x, y, yaw)
         
 
     # Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
@@ -404,22 +514,3 @@ def main():
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
-
-"""
-def main(args=None):
-    rclpy.init()
-    node = YoloDetector()
-    # Starte Eingabe-Thread
-    threading.Thread(target=node.command_loop, daemon=True).start()
-    rclpy.spin_once(node, timeout_sec=0.1)
-    try:
-        rclpy.spin_once(node, timeout_sec=0.1)
-    except KeyboardInterrupt:
-        node.get_logger().info('Node beendet')
-    finally:
-        node.destroy_node()
-        rclpy.shutdown()
-
-if __name__ == '__main__':
-    main()
-    """

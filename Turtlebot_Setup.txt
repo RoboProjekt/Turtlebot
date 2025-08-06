@@ -758,7 +758,13 @@ echo
 ----------------Stand (18.06.2025 15:16)----------------------------------------------------------
 
 
-
+ Neue funktionen für Turtelbot Objekterkennung
+ -cd Schreibtisch/Turtlebot_Meins
+ -rviz2 -d Rviz...
+ -./nav2_startup.sh
+ -./voicecontroll_start.sh
+ -ros2 run darknet_publisher darknet_pub
+ -ros2 run darknet_publisher yolo_detector
 
 
 
