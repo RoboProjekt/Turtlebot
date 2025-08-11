@@ -44,6 +44,7 @@ class BatteryMonitor(Node):
         percentage = msg.percentage
         self.last_percentage = percentage
         now = time.time()
+        
 
     def status_output_callback(self):
         if self.last_percentage is not None:

@@ -24,7 +24,7 @@ from geometry_msgs.msg import Quaternion  # type: ignore
 User = "andy"                               # andy oder bastian
 samplerate_number = 16000                   
 blocksize_number = 4096
-Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
+Abstand = 0.5                              # Abstand in Metern, bei dem ein Hindernis erkannt wird
 Timer_callback_Aufrufsintervall = 0.01
 Angle = 20                                  # gescannter Winkel in Grad
 
@@ -72,6 +72,7 @@ class VoiceControlNode(Node):
         self.navigator.waitUntilNav2Active()
 
         self.navigating = False
+        self.guard_mode = False
 
         self.waypoints_list = {
            # "flur": (1.25, 3.9),
@@ -134,6 +135,8 @@ class VoiceControlNode(Node):
         # Hinderniserkennung
         self.obstacle_detected = False                  # Zur erkennung ob Hindernis erkannt wurde
         self.obstacle_handling_active = False           # Hinderniserkennungs Handling Status
+        self.obstacle_check_active = False
+
 
         self.scan_sub = self.create_subscription(       # LIDAR Scan
             LaserScan,
@@ -170,8 +173,14 @@ class VoiceControlNode(Node):
                     self.navigating = True
                     self.play_sound(3)
                     self.handle_navigation_command(command)
-                
+                elif command == "wächter modus":
+                    self.get_logger().info(f"🚨 Wächter-Modus aktiviert !!")
+                    self.navigating = True
+                    self.guard_mode = True
+                    self.play_sound(3)
+                    threading.Thread(target=self.handle_guard_mode).start()
 
+                    
 
     # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
@@ -193,9 +202,15 @@ class VoiceControlNode(Node):
             self.twist.linear.x = 0.3
             self.twist.angular.z = -0.6
         elif "halt" in text:
-            self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
-            self.get_logger().info(Ausgabe_Befehlsliste)
-            self.get_logger().info(Ausagbe_Navigationsbefehle)
+            if self.guard_mode:
+                self.get_logger().info("Wächter Modus Beendet !!\n")
+                self.navigator.cancelTask()
+                self.guard_mode = False
+                self.navigating = False
+            else:
+                self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
+                self.get_logger().info(Ausgabe_Befehlsliste)
+                self.get_logger().info(Ausagbe_Navigationsbefehle)
         else:
             return
         self.pub.publish(self.twist)        # Publishen des Befehls
@@ -234,6 +249,7 @@ class VoiceControlNode(Node):
             self.Hindernisserkennung = Hinderniserkennung.back
         elif min_distance_front <= Abstand:
             self.Hindernisserkennung = Hinderniserkennung.front
+            self.navigator.cancelTask()
         else:
             if self.Hindernisserkennung != Hinderniserkennung.none:         # Umschalten auf Normalzustand
                 self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
@@ -266,6 +282,41 @@ class VoiceControlNode(Node):
                 self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.obstacle_handling_active = True
 
+    # Guard Mode Handhabung
+    def handle_guard_mode(self):
+
+            Punkt_A =  ("start", self.waypoints_list["start"], self.orientation_list["start"])
+            Punkt_B =  ("stellplatz", self.waypoints_list["stellplatz"], self.orientation_list["stellplatz"])
+            
+            Ziel = Punkt_A
+
+            try:
+                    while self.navigating and self.guard_mode:  # Solange der Wächtermodus aktiv ist
+                        name, (x, y), yaw = Ziel
+                        self.get_logger().info(f"🔁 Navigiere zu: {name}")
+                        self.obstacle_check_active = True
+                        threading.Thread(target=self.guard_obstacle_check, daemon=True).start()
+                        self.navigate_to_pose(x, y, yaw)
+                        Ziel = Punkt_B if Ziel == Punkt_A else Punkt_A
+                        time.sleep(1.0)  
+
+            except KeyboardInterrupt:
+                self.guard_mode = False
+                self.obstacle_check_active = False
+    
+    # Eindringlingserkennung während der Guard Mode
+    def guard_obstacle_check(self):
+        last_detected = False
+        while self.obstacle_check_active and self.guard_mode:
+            obstacle = self.Hindernisserkennung != self.Hindernisserkennung.none
+            if obstacle and not last_detected:
+                self.get_logger().warn("Eindringling erkannt !!!")
+                self.play_sound(3)
+                self.guard_mode = False
+            last_detected = obstacle
+            
+
+        
     # Funktion zur Zielübergabe an NavigateToPose
     def navigate_to_pose(self, x, y, yaw_rad):
   
@@ -286,8 +337,8 @@ class VoiceControlNode(Node):
         while not self.navigator.isTaskComplete() and self.navigating == True:
                 time.sleep(0.1)
 
-        if self.navigating:             
-            result = self.navigator.getResult() 
+        result = self.navigator.getResult()            
+            
         if result == TaskResult.SUCCEEDED:
                 self.get_logger().info("✅ Ziel erfolgreich erreicht.")
                 self.play_sound(1)
@@ -298,11 +349,14 @@ class VoiceControlNode(Node):
                 self.get_logger().warn("⚠️ Navigation wurde abgebrochen.")
 
         self.navigator.cancelTask()
-        self.navigating = False
+        if not self.guard_mode:
+            self.navigating = False
         self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
         self.get_logger().info(Ausagbe_Navigationsbefehle)
         
+        
+
 
         
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
