@@ -21,7 +21,7 @@ from geometry_msgs.msg import PoseStamped  # type: ignore
 from geometry_msgs.msg import Quaternion  # type: ignore
 
 # Eingragen wer den Code gerade benutzt
-User = "pi"                               # andy oder bastian
+User = "pi"                               # andy, bastian oder pi
 samplerate_number = 16000                   
 blocksize_number = 4096
 Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
@@ -114,7 +114,7 @@ class VoiceControlNode(Node):
 
         self.q = queue.Queue()
         self.twist = Twist()
-        #Änder der Mikrophon ID notendig falls sie nicht auf Standart steht --> None entspricht Standart
+        #Ändern der Mikrophon ID notwendig falls sie nicht auf Standart steht --> None entspricht Standart
         self.device_id = None
 
         self.stream = sd.RawInputStream(
@@ -149,11 +149,6 @@ class VoiceControlNode(Node):
         future = self.sound_client.call_async(request)
 
     
-    # Funktion Handle der Audioaufnahme und Fehleranzeige bei Audioübertragungsfehlern
-    def audio_callback(self, indata, frames, time, status):
-        if status:
-            self.get_logger().warn(f"Sounddevice Status: {status}")
-        self.q.put(bytes(indata))
 
     # Funktion zur Kommando Erkennung, mit Sperrung der Erkennnung bei Hinderniserkennung
     def timer_callback(self):
@@ -268,7 +263,7 @@ class VoiceControlNode(Node):
                 self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.obstacle_handling_active = True
 
-    # Funktion zur Zielübergabe an NavigateToPose
+    # Funktion zur Zielnavigation
     def navigate_to_pose(self, x, y, yaw_rad):
   
         q = self.euler_to_quaternion(0, 0, yaw_rad)
