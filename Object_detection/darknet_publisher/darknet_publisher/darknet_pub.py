@@ -1,10 +1,8 @@
-import rclpy                        #type:ignore
-from rclpy.node import Node         #type:ignore
-from std_msgs.msg import String     #type:ignore
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
 import subprocess
 import re
-import os
-import subprocess
 
 class YoloPublisher(Node):
     def __init__(self):
@@ -12,21 +10,10 @@ class YoloPublisher(Node):
         self.publisher_ = self.create_publisher(String, 'yolo_objects', 10)
 
         # Starte Darknet als Subprozess
-
-	# Pfad zur darknet-Binary im Home-Verzeichnis auflösen
-        darknet_bin = os.path.expanduser('~/darknet/darknet')
-        obj_data   = os.path.expanduser('~/darknet/data/yolo-aiv2/obj.data')
-        cfg        = os.path.expanduser('~/darknet/data/yolo-aiv2/yolov4-tiny-custom.cfg')
-        weights    = os.path.expanduser('~/darknet/data/yolo-aiv2/yolov4-tiny-custom_best.weights')
-
         self.process = subprocess.Popen(
-            [darknet_bin,
-             'detector', 'demo',
-             obj_data,
-             cfg,
-             weights,
-             '-c', '0',
-             '-thresh', '0.7'],
+            ['./darknet', 'detector', 'demo', 'data/yolo-aiv2/obj.data',
+             'data/yolo-aiv2/yolov4-tiny-custom.cfg', 'data/yolo-aiv2/yolov4-tiny-custom_best.weights',
+             '-c', '0', '-thresh', '0.5'],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             universal_newlines=True,
@@ -35,16 +22,6 @@ class YoloPublisher(Node):
 
         self.get_logger().info('YOLO Detection gestartet...')
         self.read_darknet_output()
-
-    def __del__(self):
-        self.get_logger().info("YoloPublisher wird zerstört!")
-        try:
-            # Beende den gesamten Prozess inkl. Forks
-            os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
-            self.get_logger().info("Darknet-Prozess beendet.")
-        except Exception as e:
-            self.get_logger().warn(f"Fehler beim Beenden von darknet: {e}")
-
 
     def read_darknet_output(self):
         pattern = re.compile(r"(\w+): (\d+)%")  # z.B. "door: 78%"
