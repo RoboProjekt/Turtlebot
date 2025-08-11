@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'darknet_pub = darknet_publisher.darknet_pub:main',
+            'yolo_detector = darknet_publisher.yolo_detector:main',
         ],
     },
 )

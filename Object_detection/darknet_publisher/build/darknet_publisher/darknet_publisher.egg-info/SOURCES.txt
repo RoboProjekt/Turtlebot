@@ -1,0 +1,14 @@
+package.xml
+setup.cfg
+setup.py
+darknet_publisher/__init__.py
+darknet_publisher/darknet_pub.py
+darknet_publisher/yolo_detector.py
+darknet_publisher.egg-info/PKG-INFO
+darknet_publisher.egg-info/SOURCES.txt
+darknet_publisher.egg-info/dependency_links.txt
+darknet_publisher.egg-info/entry_points.txt
+darknet_publisher.egg-info/requires.txt
+darknet_publisher.egg-info/top_level.txt
+darknet_publisher.egg-info/zip-safe
+resource/darknet_publisher
