@@ -149,14 +149,13 @@ class VoiceControlNode(Node):
         def __del__(self):
             self.get_logger().info("VoiceControlNode wird zerstört!")
 
-    # Funktion zur Tonwidergabe
+    # Funktion zur Tonwiedergabe
     def play_sound(self, sound_value=2):
         request = Sound.Request()
         request.value = sound_value
         future = self.sound_client.call_async(request)
 
     
-
     # Funktion zur Kommando Erkennung, mit Sperrung der Erkennnung bei Hinderniserkennung
     def timer_callback(self):
         while not self.q.empty() and self.Hindernisserkennung == Hinderniserkennung.none:
@@ -174,7 +173,7 @@ class VoiceControlNode(Node):
                     self.handle_navigation_command(command)
                 
                 
-    # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
+    # Funktion zur direkten Sprachbewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
