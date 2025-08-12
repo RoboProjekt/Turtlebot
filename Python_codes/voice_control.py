@@ -24,7 +24,7 @@ from geometry_msgs.msg import Quaternion  # type: ignore
 User = "andy"                               # andy oder bastian
 samplerate_number = 16000                   
 blocksize_number = 4096
-Abstand = 0.5                              # Abstand in Metern, bei dem ein Hindernis erkannt wird
+Abstand = 0.3                              # Abstand in Metern, bei dem ein Hindernis erkannt wird
 Timer_callback_Aufrufsintervall = 0.01
 Angle = 20                                  # gescannter Winkel in Grad
 
@@ -45,7 +45,7 @@ Valid_point_Commands = {"eingang vorne", "eingang mitte", "eingang hinten", "ste
 
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
-Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Eingang vorne, Eingang mitte , Eingang hinten, Stellplatz, Start, Flur Anfang, Flur mitte, Flur ende, Eingang büro, sofa\n"
+Ausagbe_Navigationsbefehle = "\nMögliche Navigationsziele: Eingang vorne, Eingang mitte , Eingang hinten, Stellplatz, Start\nFlur Anfang, Flur mitte, Flur ende, Eingang büro, sofa\n"
 
 
 
@@ -202,11 +202,14 @@ class VoiceControlNode(Node):
             self.twist.linear.x = 0.3
             self.twist.angular.z = -0.6
         elif "halt" in text:
-            if self.guard_mode:
+            if self.guard_mode:     # Wächtermodus wird beendet, falls er läuft
                 self.get_logger().info("Wächter Modus Beendet !!\n")
                 self.navigator.cancelTask()
                 self.guard_mode = False
                 self.navigating = False
+                self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
+                self.get_logger().info(Ausgabe_Befehlsliste)
+                self.get_logger().info(Ausagbe_Navigationsbefehle)
             else:
                 self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
                 self.get_logger().info(Ausgabe_Befehlsliste)
@@ -249,11 +252,13 @@ class VoiceControlNode(Node):
             self.Hindernisserkennung = Hinderniserkennung.back
         elif min_distance_front <= Abstand:
             self.Hindernisserkennung = Hinderniserkennung.front
-            self.navigator.cancelTask()
+            if self.guard_mode:
+                self.navigator.cancelTask()
         else:
             if self.Hindernisserkennung != Hinderniserkennung.none:         # Umschalten auf Normalzustand
                 self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
                 self.get_logger().info(Ausgabe_Befehlsliste)
+                self.get_logger().info(Ausagbe_Navigationsbefehle)
                 self.Hindernisserkennung = Hinderniserkennung.none
                 self.DirectionState = DirectionState.none
                 stopTwist = Twist()
@@ -285,6 +290,7 @@ class VoiceControlNode(Node):
     # Guard Mode Handhabung
     def handle_guard_mode(self):
 
+            # Zwei Punkte zur alternierenden Navigation
             Punkt_A =  ("start", self.waypoints_list["start"], self.orientation_list["start"])
             Punkt_B =  ("stellplatz", self.waypoints_list["stellplatz"], self.orientation_list["stellplatz"])
             
@@ -304,15 +310,19 @@ class VoiceControlNode(Node):
                 self.guard_mode = False
                 self.obstacle_check_active = False
     
-    # Eindringlingserkennung während der Guard Mode
+    # Eindringlingserkennung während des Guard Mode
     def guard_obstacle_check(self):
         last_detected = False
         while self.obstacle_check_active and self.guard_mode:
             obstacle = self.Hindernisserkennung != self.Hindernisserkennung.none
             if obstacle and not last_detected:
                 self.get_logger().warn("Eindringling erkannt !!!")
-                self.play_sound(3)
-                self.guard_mode = False
+                self.guard_mode = False     # Wächtermodus beenden
+
+                start_time = time.time()    # Alarmsignal ausgeben für 60 s
+                while time.time() - start_time < 60:
+                    self.play_sound(3)
+                    time.sleep(1) 
             last_detected = obstacle
             
 
@@ -354,11 +364,7 @@ class VoiceControlNode(Node):
         self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
         self.get_logger().info(Ausagbe_Navigationsbefehle)
-        
-        
-
-
-        
+          
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
         qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - \
              math.cos(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
