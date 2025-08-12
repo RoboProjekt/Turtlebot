@@ -40,12 +40,18 @@ class DirectionState(Enum):
     none = 4
 
 # Erlaubte Befehle
-Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
-Valid_point_Commands = {"eingang vorne", "eingang mitte", "eingang hinten", "stellplatz", "start", "flur anfang", "flur mitte", "flur ende", "eingang büro", "sofa"}
+Valid_Commands = {
+    "zurück", "vorwärts", "links", 
+    "rechts", "kreis", "halt"}
+Valid_point_Commands = {
+    "eingang vorne", "eingang mitte", "eingang hinten",
+    "stellplatz", "start", "flur anfang", 
+    "flur mitte", "flur ende", "eingang büro", 
+    "sofa"}
 
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
-Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Eingang vorne, Eingang mitte , Eingang hinten, Stellplatz, Start, Flur Anfang, Flur mitte, Flur ende, Eingang büro, sofa\n"
+Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Eingang vorne, Eingang mitte , Eingang hinten, Stellplatz, Start\nFlur Anfang, Flur mitte, Flur ende, Eingang büro, sofa\n"
 
 
 
@@ -63,8 +69,6 @@ class VoiceControlNode(Node):
         elif User == "pi":
             model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Python_codes/vosk-model-small-de-0.15"
 
-        def __del__(self):
-            self.get_logger().info("VoiceControlNode wird zerstört!")
 
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
@@ -142,7 +146,10 @@ class VoiceControlNode(Node):
             qos_profile_sensor_data
         )
 
+        def __del__(self):
+            self.get_logger().info("VoiceControlNode wird zerstört!")
 
+    # Funktion zur Tonwidergabe
     def play_sound(self, sound_value=2):
         request = Sound.Request()
         request.value = sound_value
@@ -165,11 +172,8 @@ class VoiceControlNode(Node):
                     self.navigating = True
                     self.play_sound(3)
                     self.handle_navigation_command(command)
-                elif command not in Valid_point_Commands:
-                    self.get_logger().info(f"Erkannt: {command}")
                 
-
-
+                
     # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
         self.twist.linear.x = 0.0
