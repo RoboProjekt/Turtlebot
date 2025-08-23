@@ -1,3 +1,7 @@
+# Neue Logging Ausgaben für debugging nach Nav2Pose (evntl hat return in nav2pose schon gefixt) -> Ansonsten working und navigating Überprüfen 
+# Neue Variable für Tür anlegen ab gewisser sicherheit
+# Umgestellte Positions und Orientationsbestimmung nach AMCL daten
+
 import rclpy  # type: ignore
 from rclpy.node import Node  # type: ignore
 from rclpy.time import Time # type: ignore
@@ -21,22 +25,26 @@ import numpy as np  # type: ignore
 import math
 import time
 import threading
+import sys
+import re
 
 
 # Variablen für Funktionen
-Abstand = 0.5                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
-Timer_callback_Aufrufsintervall = 0.1
-Angle = 10                                  # gescannter Winkel in Grad
+Abstand = 0.5                               # Abstand in Metern, bei dem auf bekannte Position geprüft wird
+door_distance = 0.5                         #Sicherheitsabstand für Türerkennung
+Timer_callback_Aufrufsintervall = 0.1       #Wie oft soll die Timer_callback ausgelöst werden?
 Angle_doorscan = 2                          # gescannter Winkel für Türerkennung
 tracking_radius = 1                         #radius für start/endposition wand tracking
 MenuTime = 5.0                              #Wie oft wird das Menü neu ausgegeben
+doorConf = 70                               #Wie sicher muss die Objekterkennung sein, damit die Türen verarbeitet werden
 
 
 class YoloDetector(Node):
     def __init__(self):
-        super().__init__('yolo_detector')
+        super().__init__('YoloDetector')
         self.pub = self.create_publisher(Twist, 'cmd_vel', 10)
-
+        self.get_logger().info('Objekterkennung gestartet...')
+        #INCLUDE YOLO OBJECT DETECTION
         self.sub_yolo = self.create_subscription(
             String,
             'yolo_objects', 
@@ -58,10 +66,9 @@ class YoloDetector(Node):
             10
         )
 
-        self.sound_client = self.create_client(Sound, '/sound')
+        self.timer = self.create_timer(Timer_callback_Aufrufsintervall, self.timer_callback)
 
-        self.input_timer = self.create_timer(Timer_callback_Aufrufsintervall, self.timer_callback)
-        self.tracking_timer = self.create_timer(Timer_callback_Aufrufsintervall, self.tracking_loop)
+        self.sound_client = self.create_client(Sound, '/sound')
 
         #Neuer Subscriber für map und baselink zum Umrechnen in current_position
         self.tf_buffer = Buffer()
@@ -74,7 +81,7 @@ class YoloDetector(Node):
            # "flur": (1.25, 3.9),
              "eingang vorne": (18.5, 1.72, 4.71),
              "eingang mitte": (6.05, 1.77, 4.71),
-             "eingang hinten": (-1.7, 1.57, 4.71),
+             #"eingang hinten": (-1.7, 1.57, 4.71),
              "stellplatz": (4.2, 1.07, 3.14),
              "start": (0.0, 0.0, 0.00),
              "flur anfang": (18.55, 3.62, 3.14),
@@ -103,82 +110,66 @@ class YoloDetector(Node):
         self.obstacle_detected = False                  # Zur erkennung ob Hindernis erkannt wurde
         self.obstacle_handling_active = False           # Hinderniserkennungs Handling Status
 
+        #NEU EINGEFÜGT
         self.cmd_queue = queue.Queue()
-        threading.Thread(target=self._input_loop, daemon=True).start()
-
-        self.get_logger().info('Objekterkennung gestartet...')
-        #self.timer_callback()
+        # Start input thread (liest stdin nur hier)
+        self.console_lock = threading.Lock()
+        threading.Thread(target=self.input_loop, daemon=True).start()
+        threading.Thread(target=self.navigate_to_pose, daemon=True).start()
+        ###############
 
 
     def __del__(self):
         self.get_logger().info("YoloDetector wird zerstört!")
 
 
-    #NEU EINGEFÜGT
-    def _input_loop(self):
-        #Einziger Thread, der input() liest und Befehle in eine Queue legt.
-        while rclpy.ok():
+    def input_loop(self):
+        while rclpy.ok() and self.working == False:
             try:
-                self.output_commands()
-                cmd = input("Befehl: ").strip().lower()
+                # Prompt auf stderr (Logger nutzt stderr) und flush
+                sys.stderr.write("Befehl: ")
+                sys.stderr.flush()
+                line = sys.stdin.readline()
+                if not line:
+                    break
+                cmd = line.strip().lower()
+                if cmd:
+                    self.cmd_queue.put(cmd)
             except (EOFError, KeyboardInterrupt):
                 break
-            if cmd:
-                self.cmd_queue.put(cmd)
-
-
-    def _tracking_worker(self):
-        try:
-            while self.tracking_active and rclpy.ok():
-                # rufe die nicht-blockierende tracking() auf, die einmalig arbeitet
-                self.tracking()
-                # kurze Pause, damit CPU nicht 100%
-                time.sleep(0.05)
-        except Exception as e:
-            self.get_logger().error(f"Tracking-Worker Fehler: {e}")
-        finally:
-            self.tracking_active = False
-            self.working = False
-    ###############
-
+    
 
     #NEU EINGEFÜGT
     def timer_callback(self):
-        # Menü nur zeigen ab und zu (throttle)
-        self.output_commands()
-
+        #self._input_loop()
         # Wenn bereits in Navigation/Tracking: nichts neues starten
-        if self.working:
-            return
-
-        # Versuche einen Command aus der Queue (non-blocking)
-        try:
-            cmd = self.cmd_queue.get_nowait()
-        except queue.Empty:
-            return
-
-        # Jetzt verarbeite den Befehl SERIELL IM HAUPTTREAD
-        if cmd == "wand tracking":
-            self.tracking_active = True
-            self.working = True
-            threading.Thread(target=self._tracking_worker, daemon=True).start()
-            self.get_logger().info("Starte Wand-Tracking (Worker Thread)")
-        elif cmd in self.waypoints:
-            # Set flags and call navigate_to_pose directly (kein Worker-Thread!)
-            self.working = True
-            self.navigating = True
-            x, y, yaw = self.waypoints.get(cmd)
-            self.get_logger().info(f"Starte Navigation zu {cmd} (seriell im Hauptthread)")
+        if not self.working and not self.navigating:
+            self.output_commands()
+            # Versuche einen Command aus der Queue (non-blocking)
             try:
-                # navigate_to_pose blockiert, ruft intern rclpy.spin_once, ist aber safe hier
-                self.navigate_to_pose(x, y, yaw)
-            except Exception as e:
-                self.get_logger().error(f"Fehler während Navigation: {e}")
-            finally:
-                self.navigating = False
-                self.working = False
-        else:
-            self.get_logger().warn(f"Ungültiger Befehl: {cmd}")
+                cmd = self.cmd_queue.get_nowait()
+            except queue.Empty:
+                return
+
+            if cmd in self.waypoints:
+                # Set flags and call navigate_to_pose directly (kein Worker-Thread!)
+                self.working = True
+                self.navigating = True
+                x, y, yaw = self.waypoints.get(cmd)
+                self.get_logger().info(f"Starte Navigation zu {cmd} (seriell im Hauptthread)")
+                try:
+                    self.get_logger().info(f"try vor nav2pose")
+                    self.navigate_to_pose(x, y, yaw)
+                    self.get_logger().info(f"try nach nav2pose")
+                except Exception as e:
+                    self.get_logger().error(f"Fehler während Navigation: {e}")
+                finally:
+                    self.get_logger().info(f"finally nach nav2pose")
+                    self.navigating = False
+                    self.working = False
+                    self.get_logger().info(f"navigating und working auf false nach nav2pose")
+            else:
+                self.get_logger().warn(f"Ungültiger Befehl: {cmd}")
     ####################
 
 
@@ -190,7 +181,6 @@ class YoloDetector(Node):
 
     #NEU EINGEFÜGT
     def output_commands(self):
-        #Zeigt die gültigen Befehle, aber nicht bei jeder Timer-Iteration (throttled).
         now = time.time()
         # last menu print timestamp (erstellt bei Bedarf)
         if not hasattr(self, '_last_menu_print'):
@@ -201,8 +191,7 @@ class YoloDetector(Node):
             return
         self._last_menu_print = now
 
-        self.get_logger().info("    Gültige Befehle:")
-        self.get_logger().info("Wand tracking")
+        self.get_logger().info("Gültige Befehle:")
         for i, name in enumerate(self.waypoints.keys(), start=1):
             self.get_logger().info(f"{i}: {name}")
 
@@ -216,207 +205,81 @@ class YoloDetector(Node):
                 self.get_logger().info("Befehl wird abgearbeitet")
 
 
-    def tracking(self):
-        self.get_logger().info("tracking start")
-
-        twist = Twist()
-
-        if self.current_pose is None:
-            self.get_logger().info("Keine Gültige momentan Position")
-            #warte bis Bedingung erfüllt
-            #self.tracking_active = False
-            #self.working = False
+    def scan_callback(self, msg: LaserScan):
+        self.latest_scan = msg  # für yolo_callback / spätere Projektion
+        n = len(msg.ranges)
+        if n == 0:
             return
-
-        # --- 1. Startpunkt merken ---
-        """
-        while self.start_pose is None :
-            if self.min_distance_front <= Abstand:
-                self.get_logger().info("tracking start position setzen")
-                self.start_pose = self.current_pose
-                self.get_logger().info(f"Start-Pose gesetzt: x={self.start_pose[0]:.2f}, y={self.start_pose[1]:.2f}")
-            else :
-                self.get_logger().info("Zu weit weg von Wand für startpunkt")
-                twist.linear.x = 0.2
-        """
-        #NEU EINGEFÜGT
-        if self.start_pose is None:
-            if self.min_distance_front <= Abstand:
-                self.start_pose = self.current_pose
-                self.get_logger().info(f"Start-Pose gesetzt: x={self.start_pose[0]:.2f}, y={self.start_pose[1]:.2f}")
-                return
-            else:
-                self.get_logger().info("Zu weit weg von Wand für startpunkt")
-                twist.linear.x = 0.2
-                self.pub.publish(twist)
-                return
-        ################
-
-
-        # --- 2. Prüfen, ob Startpunkt wieder erreicht wurde ---
-        dx = self.current_pose[0] - self.start_pose[0]
-        dy = self.current_pose[1] - self.start_pose[1]
-        if math.hypot(dx, dy) <= tracking_radius:
-            self.get_logger().info("Zurück am Startpunkt. Tracking endet.")
-            self.start_pose = None
-            self.tracking_active = False
-            self.working = False
-            self.play_sound(1)
-            #self.command_queue.task_done()
-            self.timer_callback()
-            #self.command_queue = queue.Queue()
-            return
-
-        # --- 3. Hindernis direkt vorne: Nur nach rechts drehen, bis Front und Links frei sind ---
-        if self.min_distance_front < Abstand or self.min_distance_left < Abstand:
-            twist.linear.x = 0.0
-            twist.angular.z = -0.5  # Rechtsdrehung
-            self.pub.publish(twist)
-            return
-
-        # --- 4. Normaler Wall-Following: PD-Regelung auf linken Abstand ---
-        error = self.min_distance_left - Abstand
-        kP = 1.0
-
-        twist.linear.x = 0.2
-        twist.angular.z = -kP * error
-        self.pub.publish(twist)
-        #self.tracking_loop()
-
-
-    #Funktion zum wiederholten Aufruf von tracking
-    def tracking_loop(self):
-        #self.get_logger().info("tracking_loop start")
-        if self.working and self.tracking_active:
-            #self.get_logger().info("tracking active")
-            self.tracking()
-        else :
-            #self.get_logger().info("tracking inactive")
-            self. working = False
-            self.tracking_active = False
-        #self.get_logger().info("tracking_loop beendet")
-        
-
-    # Funktion zur Zielnavigationssteuerung des Roboters
-    def handle_navigation_command(self, ziel_name):
-        if ziel_name in self.waypoints:
-            ziel = self.waypoints.get(ziel_name)
-            if ziel:
-                x ,y , yaw = ziel
-            self.navigate_to_pose(
-                x, # type: ignore
-                y, # type: ignore 
-                yaw # type: ignore
-            )
-        
-
-    # Funktion zum scannen der Umgebung und stoppen bei Hinderniserkennung
-    # Neuer Aufruf sobald neuer LIDAR Scan empfangen wurde
-    def scan_callback(self, msg):
-
-        self.latest_scan = msg # Abspeichern Scan für yolo_callback
-
-        num_ranges = len(msg.ranges)
-
-        front_center = num_ranges   # Beobachtet bei 360 Grad, sprich vorne
-        window_front = msg.ranges[max(0, front_center - Angle):min(num_ranges, front_center + Angle)] # Beobachtet 360 - Angle : 359 + Angle Werte
-
-        back_center = num_ranges // 2   # Beobachtet bei 360 Grad/2 = 180 Grad, sprich hinten
-        window_back = msg.ranges[max(0, back_center - Angle):min(num_ranges, back_center + Angle)]
-
-        left_center = num_ranges // 4  # Beobachtet bei 360 Grad/4, sprich 90° links
-        window_left = msg.ranges[max(0, left_center - Angle):min(num_ranges, left_center + Angle)] # Beobachtet 360 - Angle : 359 + Angle Werte
-
-        right_center = (num_ranges // 4) * 3  # Beobachtet bei 360 Grad/4, sprich 90° links
-        window_right = msg.ranges[max(0, right_center - Angle):min(num_ranges, right_center + Angle)] # Beobachtet 360 - Angle : 359 + Angle Werte
-
-        valid_ranges_front = [r for r in window_front if np.isfinite(r) and r > 0.05]   # Gültige Werte für Hinderniserkennung auf der Vorderseite
-        valid_ranges_back = [r for r in window_back if np.isfinite(r) and r > 0.05]     # Gültige Werte für Hinderniserkennung auf der Rückseite
-        valid_ranges_left = [r for r in window_left if np.isfinite(r) and r > 0.05]     # Gültige Werte für Hinderniserkennung links
-        valid_ranges_right = [r for r in window_right if np.isfinite(r) and r > 0.05]     # Gültige Werte für Hinderniserkennung rechts
-
-        if not valid_ranges_front or not valid_ranges_back or not valid_ranges_left or not valid_ranges_right:     # Beenden falls keine gültigen Werte erkannt wurden
-            return
-
-        self.min_distance_front = min(valid_ranges_front)            # kleinste Distanz der gemessenen Werte vorne
-        self.min_distance_back = min(valid_ranges_back)              # kleinste Distanz der gemessenen Werte hinten
-        self.min_distance_left = min(valid_ranges_left)
-        self.min_distance_right = min(valid_ranges_right)
-
-
-    #NEW BLOCK FOR YOLO INTEGRATION
-    def yolo_callback(self, msg: String):
-        text = msg.data.lower()
-        if "door" in text :
-            if not self.latest_scan:
-                return
-            # Abstand inkl. Sicherheit abziehen
-            raw_dist = self._get_front_distance(self.latest_scan)
-            dist = max(0.0, raw_dist - Abstand)  # Sicherheitsabstand abziehen
-            if not np.isfinite(dist):
-                self.get_logger().info("\nTür zu weit entfernt\n")
-                return
-            x,y = self._calc_global_position(dist)
-            if x is None or y is None:  #x und y auf Gültigkeit überprüfen
-                return
-            # Prüfen, ob Position schon in waypoints existiert
-            for (vx,vy,yaw) in self.waypoints.values():
-                if math.hypot(vx-x, vy-y) < Abstand:
-                    self.get_logger().info(f"Tür bekannt")
-                    return  # bereits bekannt
-            # Neue Tür anlegen
-            name = f"tür {len(self.waypoints)+1}"
-            yaw = self._get_current_yaw()
-            self.waypoints[name] = (x,y,yaw)
-            self.get_logger().info(f"\nNeue Tür erkannt: {name} at ({x:.2f},{y:.2f})\n")
-
-
-    #Bestimme die Distanz nach vorne heraus
-    def _get_front_distance(self, scan: LaserScan) -> float:
-        mid = len(scan.ranges)//2
-        window = scan.ranges[mid-Angle_doorscan:mid+Angle_doorscan]     # Angle_doorscan als Winkel in welchem die geringste Distanz zur Tür bestimmt wird
-        valid = [r for r in window if np.isfinite(r) and r>0]
-        return min(valid) if valid else float('nan')
-
-
-    #Bestimme die momentane Position des Roboters in der Karte
-    def _calc_global_position(self, dist: float):
-        pose = self.get_robot_pose_map()
-        if pose is None:
-            return None, None
-        x0, y0, yaw = pose
-        self.current_pose = pose
-        return x0 + dist * math.cos(yaw), y0 + dist * math.sin(yaw)
-
-
-    #Bestimme momentane Orientierung im Raum bzw. in der Karte
-    def _get_current_yaw(self):
-        pose = self.get_robot_pose_map()
-        if pose is None:
-            return None
-        return pose[2]  # yaw
-
-    #Falls amcl keine Pose veröffentlicht hat, versuche eine Pose über den tf_tree zu berechnen
-    def get_robot_pose_map(self):
-        if self.current_pose is not None:
-            return self.current_pose
-        # Fallback: versuche TF lookup (optional)
+        angle_min = msg.angle_min
+        inc = msg.angle_increment
+        # nutze als minimalen akzeptablen Range den Scan.range_min (plus ein kleines epsilon)
+        min_acceptable = max(msg.range_min, 0.05)
+        max_acceptable = msg.range_max
+        # Hilfsfunktion: normalisieren in [-pi, pi]
+        def _norm(a):
+            return math.atan2(math.sin(a), math.cos(a))
+        # gewünschte Richtungen (in base_footprint / robot-frame, 0 = vorwärts)
+        desired_in_base = {
+            "front": 0.0,
+            "back": math.pi,
+            "left": math.pi / 2.0,
+            "right": -math.pi / 2.0,
+        }
+        # Anzahl Bins links/rechts vom Zentrum (wrap-aware)
+        half_bins = max(1, int(round(math.radians(Angle_doorscan) / abs(inc))))  #Angle gibt das scan Fenster für alle Seiten vor
+        results = {}  # name -> minimaler Abstand (oder inf)
+        # Versuche TF: Ermittle Drehung (yaw) des scan-frames in base_footprint, falls möglich.
+        scan_frame = msg.header.frame_id if hasattr(msg, "header") else None
+        yaw_scan_in_base = 0.0
         try:
-            now = rclpy.time.Time()
-            trans = self.tf_buffer.lookup_transform('map', 'base_footprint', now)
-            x = trans.transform.translation.x
-            y = trans.transform.translation.y
-            q = trans.transform.rotation
-            yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
-            return (x, y, yaw)
-        except Exception as e:
-            self.get_logger().warn(f"Fehler beim transformieren: {e}")
-            return None
+            if scan_frame and hasattr(self, "tf_buffer"):
+                # Transformiere: wir holen die Pose von scan_frame in base_footprint
+                now = rclpy.time.Time()
+                trans = self.tf_buffer.lookup_transform('base_footprint', scan_frame, now)
+                q = trans.transform.rotation
+                yaw_scan_in_base = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
+                # yaw_scan_in_base ist die Rotation (z) von scan_frame relativ zu base_footprint
+        except Exception:
+            # TF nicht verfügbar oder Fehler -> fallback: yaw_scan_in_base = 0 (angenommen aligned)
+            yaw_scan_in_base = 0.0
+        # Für jede Seite: bestimme das Fenster und den minimalen gültigen Wert
+        for name, desired_base_angle in desired_in_base.items():
+            # gewünschter Winkel in Scan-Frame (wenn scan nicht aligned ist, kompensieren)
+            desired_scan_angle = _norm(desired_base_angle - yaw_scan_in_base)
+            # Center-Index im Scan-Array (wrap)
+            idx_center = int(round((desired_scan_angle - angle_min) / inc)) % n
+            # Fenster-Indices (wrap-aware)
+            indices = [(idx_center + i) % n for i in range(-half_bins, half_bins + 1)]
+            # Filter gültiger Werte im Fenster
+            valid = []
+            for i in indices:
+                r = msg.ranges[i]
+                if np.isfinite(r) and (r >= min_acceptable) and (r <= max_acceptable):
+                    valid.append((i, r))
+            if not valid:
+                results[name] = float('inf')  # kein gültiger Wert im Fenster
+            else:
+                abs_idx, raw_r = min(valid, key=lambda x: x[1])
+                results[name] = raw_r
+        # Wenn du exakt das ursprüngliche Verhalten behalten willst (Abbruch, falls irgendeine Seite fehlt),
+        # dann kannst du wie vorher returnen. Ich empfehle stattdessen, nur zu returnen wenn *alle* Seiten fehlen.
+        # Hier verhalte ich mich wie ursprünglich: abbrechen wenn eine Seite keine gültigen Messungen hat.
+        if (not np.isfinite(results["front"])) or (not np.isfinite(results["back"])) or \
+        (not np.isfinite(results["left"])) or (not np.isfinite(results["right"])):
+            # Optional: logge welche Seite fehlt
+            missing = [k for k, v in results.items() if not np.isfinite(v)]
+            self.get_logger().debug(f"Scan window missing for sides: {missing}")
+            return
+        # Setze die minimalen Distanzen (wie vorher)
+        self.min_distance_front = results["front"]
+        self.min_distance_back = results["back"]
+        self.min_distance_left = results["left"]
+        self.min_distance_right = results["right"]
 
 
-    def amcl_pose_callback(self, msg: PoseWithCovarianceStamped):
+    #Immer wenn amcl eine Pose veröffentlicht wird die neue Position als aktuelle Roboterposition weggespeichert
+    def amcl_pose_callback(self, msg: PoseWithCovarianceStamped):   
         self.get_logger().info("amcl_pose_callback start")
-
         x = float(msg.pose.pose.position.x)
         y = float(msg.pose.pose.position.y)
         q = msg.pose.pose.orientation
@@ -424,7 +287,60 @@ class YoloDetector(Node):
         yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
         self.current_pose = (x, y, yaw)
         self.get_logger().info(f"amcl_pose_callback: current_pose gesetzt: {self.current_pose}")
-            
+
+
+    #NEW BLOCK FOR YOLO INTEGRATION
+    def yolo_callback(self, msg: String):
+        text = msg.data.lower()
+        #self.new_door = False
+        if "door" in text:
+            match = re.search(r"(\d+)%", text)
+            if match:
+                zahl = int(match.group(1))
+                if zahl > doorConf:
+                    if not self.latest_scan:
+                        return
+                    # Abstand inkl. Sicherheit abziehen
+                    #raw_dist = self._get_front_distance(self.latest_scan)
+                    raw_dist = self.min_distance_front
+                    dist = max(0.0, raw_dist - door_distance)  # Sicherheitsabstand abziehen
+                    if not np.isfinite(dist):
+                        self.get_logger().info("\nTür zu weit entfernt\n")
+                        return
+                    x,y = self._calc_global_position(dist)
+                    if x is None or y is None:  #x und y auf Gültigkeit überprüfen
+                        return
+                    # Prüfen, ob Position schon in waypoints existiert
+                    for (vx,vy,yaw) in self.waypoints.values():
+                        if math.hypot(vx-x, vy-y) < Abstand:
+                            self.get_logger().info(f"Tür bereits bekannt\n")
+                            return  # bereits bekannt
+                    #self.new_door = True
+                    # Neue Tür anlegen
+                    name = f"tür {len(self.waypoints)+1}"
+                    yaw = self._get_current_yaw()
+                    self.waypoints[name] = (x,y,yaw)
+                    self.get_logger().info(f"\nRoboter Position: {self.current_pose}")
+                    self.get_logger().info(f"Neue Tür erkannt: {name} at ({x:.2f},{y:.2f})\n")
+        
+
+    #Bestimme die momentane Position der Tür in der Karte
+    def _calc_global_position(self, dist: float):
+        pose = self.current_pose #Bestimme die momentane Position des Roboters in der Karte
+        if pose is None:
+            return None, None
+        x0, y0, yaw = pose
+        self.current_pose = pose
+        return x0 + dist * math.cos(yaw), y0 + dist * math.sin(yaw) #Berechne Position der Tür in abhängigkeit von minimaler Distanz nach vorne
+
+
+    #Bestimme momentane Orientierung im Raum bzw. in der Karte
+    def _get_current_yaw(self):
+        pose = self.current_pose
+        if pose is None:
+            return None
+        return pose[2]  # yaw
+
 
     # Funktion zur Zielübergabe an NavigateToPose
     def navigate_to_pose(self, x, y, yaw_rad):
@@ -443,30 +359,32 @@ class YoloDetector(Node):
         self.navigating = True
         self.navigator.goToPose(goal_pose)
 
-        # Warten bis Navigation abgeschlossen ist
         while not self.navigator.isTaskComplete() and self.navigating == True:
-                rclpy.spin_once(self, timeout_sec=0.1)
+            time.sleep(0.1)
 
         if self.navigating:             
             result = self.navigator.getResult() 
-        if result == TaskResult.SUCCEEDED:
-                self.get_logger().info("✅ Ziel erfolgreich erreicht.")
-                self.current_pose = (x, y, yaw_rad)
-                self.navigating = False
-                self.play_sound(1)
-        elif result == TaskResult.FAILED:
-                self.get_logger().warn("❌ Navigation fehlgeschlagen.")
-                self.navigating = False
-                self.play_sound(2)
-        elif result == TaskResult.CANCELED:
-                self.get_logger().warn("⚠️ Navigation wurde abgebrochen.")
-                self.navigating = False
+            if result == TaskResult.SUCCEEDED:
+                    self.get_logger().info("✅ Ziel erfolgreich erreicht.")
+                    self.current_pose = (x, y, yaw_rad)
+                    self.navigating = False
+                    self.play_sound(1)
+            elif result == TaskResult.FAILED:
+                    self.get_logger().warn("❌ Navigation fehlgeschlagen.")
+                    self.navigating = False
+                    self.play_sound(2)
+            elif result == TaskResult.CANCELED:
+                    self.get_logger().warn("⚠️ Navigation wurde abgebrochen.")
+                    self.navigating = False
 
+        self.get_logger().info(f"nav2pose vor cancelTask")
         self.navigator.cancelTask()
+        self.get_logger().info(f"nav2pose nach cancelTask, vor navigating und working")
         self.navigating = False
         self.working = False
-        self.get_logger().info("\n-----Warte auf neuen Befehl-----\n")
-        self.timer_callback()
+        self.get_logger().info(f"nav2pose nach navigating und working False")
+        #self.get_logger().info("\n-----Warte auf neuen Befehl-----\n")
+        return
 
         
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:

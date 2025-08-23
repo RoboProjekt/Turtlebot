@@ -18,9 +18,9 @@ import darknet
 
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 
-class YoloPublisher(Node):
+class DarknetPublisher(Node):
     def __init__(self):
-        super().__init__('yolo_object_publisher')
+        super().__init__('DarknetPublisher')
 
         # Parameter: image topic (standard /image_raw), threshold
         self.declare_parameter('image_topic', '/image_raw')
@@ -211,7 +211,7 @@ class YoloPublisher(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = YoloPublisher()
+    node = DarknetPublisher()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
