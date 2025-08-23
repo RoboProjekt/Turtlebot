@@ -1,7 +1,4 @@
-#!/bin/bash
-
-#nav2_start.sh
-
+#!/usr/bin/env bash
 
 # Pfade
 MAP_FILE="/home/pi/Datentransfer/map_saves/komplettes_Labor_mit_Flur.yaml"
@@ -11,9 +8,9 @@ PARAMS_FILE="/home/pi/Datentransfer/nav2_params.yaml"
 NODES=(
   "map_server nav2_map_server map_server --ros-args -p yaml_filename:=\"${MAP_FILE}\""
   "amcl      nav2_amcl        amcl"
-  "planner_server  nav2_planner    planner_server --ros-args --params-file \"${PARAMS_FILE}\""
-  "controller_server nav2_controller controller_server --ros-args --params-file \"${PARAMS_FILE}\""
-  "bt_navigator      nav2_bt_navigator  bt_navigator --ros-args --params-file \"${PARAMS_FILE}\""
+  "planner_server  nav2_planner    planner_server --ros-args params_file:=\"${PARAMS_FILE}\""
+  "controller_server nav2_controller controller_server --ros-args params_file:=\"${PARAMS_FILE}\""
+  "bt_navigator      nav2_bt_navigator  bt_navigator --ros-args params_file:=\"${PARAMS_FILE}\""
 )
 
 echo "== Starte Nav2-Stack mit eigenem params_file =="
@@ -82,9 +79,6 @@ echo "   ros2 action list             # sollte /follow_path enthalten"
 echo "   ros2 topic echo /map         # Karte sichtbar?"
 echo
 
-sleep 4
-
-#voicecontrol_start.sh
 
 # Starte turtlebot3_bringup
 ros2 launch turtlebot3_bringup robot.launch.py > /tmp/tb3_bringup.log 2>&1 &
@@ -93,7 +87,7 @@ sleep 7
 
 # Starte Nav2 mit Karte
 ros2 launch nav2_bringup navigation_launch.py \
-  map:=/home/pi/Datentransfer/map_saves/H0.093.yaml \
+  map:=/home/pi/Datentransfer/map_saves/komplettes_Labor_mit_Flur.yaml \
   autostart:=true > /tmp/nav2.log 2>&1 &
 echo "Nav2 gestartet..."
 sleep 7  # Gib Nav2 Zeit zum Initialisieren
@@ -118,5 +112,9 @@ echo "Karte geladen..."
 ros2 service call /map_server/load_map nav2_msgs/srv/LoadMap \
 "{map_url: '/home/pi/Datentransfer/map_saves/komplettes_Labor_mit_Flur.yaml'}" > /tmp/loadmap.log 2>&1 &
 echo "Karte geladen..."
+sleep 5
+
+ros2 run v4l2_camera v4l2_camera_node 2>&1 &
+echo "Kamera gestartet..."
 
 echo "Alle Prozesse wurden gestartet."
