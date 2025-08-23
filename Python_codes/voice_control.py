@@ -5,7 +5,7 @@ from sensor_msgs.msg import LaserScan  # Für Hinderniserkennung # type: ignore
 from turtlebot3_msgs.srv import Sound #type: ignore
 from rclpy.qos import qos_profile_sensor_data  # type: ignore
 from enum import Enum
-from std_srvs.srv import SetBool #type:ignore
+from std_srvs.srv import SetBool
 
 import sounddevice as sd  # type: ignore
 import queue
@@ -21,10 +21,10 @@ from geometry_msgs.msg import PoseStamped  # type: ignore
 from geometry_msgs.msg import Quaternion  # type: ignore
 
 # Eingragen wer den Code gerade benutzt
-User = "andy"                               # andy oder bastian
+User = "pi"                               # andy, bastian oder pi
 samplerate_number = 16000                   
 blocksize_number = 4096
-Abstand = 0.3                              # Abstand in Metern, bei dem ein Hindernis erkannt wird
+Abstand = 0.3                               # Abstand in Metern, bei dem ein Hindernis erkannt wird
 Timer_callback_Aufrufsintervall = 0.01
 Angle = 20                                  # gescannter Winkel in Grad
 
@@ -40,12 +40,18 @@ class DirectionState(Enum):
     none = 4
 
 # Erlaubte Befehle
-Valid_Commands = {"zurück", "vorwärts", "links", "rechts", "kreis", "halt"}
-Valid_point_Commands = {"eingang vorne", "eingang mitte", "eingang hinten", "stellplatz", "start", "flur anfang", "flur mitte", "flur ende", "eingang büro", "sofa"}
+Valid_Commands = {
+    "zurück", "vorwärts", "links", 
+    "rechts", "kreis", "halt"}
+Valid_point_Commands = {
+    "eingang vorne", "eingang mitte", "eingang hinten",
+    "stellplatz", "start", "flur anfang", 
+    "flur mitte", "flur ende", "eingang büro", 
+    "sofa"}
 
 
 Ausgabe_Befehlsliste = "\nMögliche Befehle: vorwärts, zurück, halt, links, rechts, kreis\n"
-Ausagbe_Navigationsbefehle = "\nMögliche Navigationsziele: Eingang vorne, Eingang mitte , Eingang hinten, Stellplatz, Start\nFlur Anfang, Flur mitte, Flur ende, Eingang büro, sofa\n"
+Ausagbe_Navigationsbefehle = "Mögliche Navigationsziele: Eingang vorne, Eingang mitte , Eingang hinten, Stellplatz, Start\nFlur Anfang, Flur mitte, Flur ende, Eingang büro, sofa\n"
 
 
 
@@ -63,8 +69,6 @@ class VoiceControlNode(Node):
         elif User == "pi":
             model_path =r"/home/pi/Git_Turtlebot/Turtlebot/Python_codes/vosk-model-small-de-0.15"
 
-        def __del__(self):
-            self.get_logger().info("VoiceControlNode wird zerstört!")
 
         self.model = vosk.Model(model_path)
         self.navigator = BasicNavigator()
@@ -72,7 +76,6 @@ class VoiceControlNode(Node):
         self.navigator.waitUntilNav2Active()
 
         self.navigating = False
-        self.guard_mode = False
 
         self.waypoints_list = {
            # "flur": (1.25, 3.9),
@@ -115,7 +118,7 @@ class VoiceControlNode(Node):
 
         self.q = queue.Queue()
         self.twist = Twist()
-        #Änder der Mikrophon ID notendig falls sie nicht auf Standart steht --> None entspricht Standart
+        #Ändern der Mikrophon ID notwendig falls sie nicht auf Standart steht --> None entspricht Standart
         self.device_id = None
 
         self.stream = sd.RawInputStream(
@@ -135,8 +138,6 @@ class VoiceControlNode(Node):
         # Hinderniserkennung
         self.obstacle_detected = False                  # Zur erkennung ob Hindernis erkannt wurde
         self.obstacle_handling_active = False           # Hinderniserkennungs Handling Status
-        self.obstacle_check_active = False
-
 
         self.scan_sub = self.create_subscription(       # LIDAR Scan
             LaserScan,
@@ -145,19 +146,16 @@ class VoiceControlNode(Node):
             qos_profile_sensor_data
         )
 
+        def __del__(self):
+            self.get_logger().info("VoiceControlNode wird zerstört!")
 
+    # Funktion zur Tonwiedergabe
     def play_sound(self, sound_value=2):
         request = Sound.Request()
         request.value = sound_value
         future = self.sound_client.call_async(request)
 
     
-    # Funktion Handle der Audioaufnahme und Fehleranzeige bei Audioübertragungsfehlern
-    def audio_callback(self, indata, frames, time, status):
-        if status:
-            self.get_logger().warn(f"Sounddevice Status: {status}")
-        self.q.put(bytes(indata))
-
     # Funktion zur Kommando Erkennung, mit Sperrung der Erkennnung bei Hinderniserkennung
     def timer_callback(self):
         while not self.q.empty() and self.Hindernisserkennung == Hinderniserkennung.none:
@@ -173,16 +171,9 @@ class VoiceControlNode(Node):
                     self.navigating = True
                     self.play_sound(3)
                     self.handle_navigation_command(command)
-                elif command == "wächter modus":
-                    self.get_logger().info(f"🚨 Wächter-Modus aktiviert !!")
-                    self.navigating = True
-                    self.guard_mode = True
-                    self.play_sound(3)
-                    threading.Thread(target=self.handle_guard_mode).start()
-
-                    
-
-    # Funktion zur dynamischen Sprachbewegungssteuerung des Roboters
+                
+                
+    # Funktion zur direkten Sprachbewegungssteuerung des Roboters
     def handle_movement_Command(self, text):
         self.twist.linear.x = 0.0
         self.twist.angular.z = 0.0
@@ -202,18 +193,9 @@ class VoiceControlNode(Node):
             self.twist.linear.x = 0.3
             self.twist.angular.z = -0.6
         elif "halt" in text:
-            if self.guard_mode:     # Wächtermodus wird beendet, falls er läuft
-                self.get_logger().info("Wächter Modus Beendet !!\n")
-                self.navigator.cancelTask()
-                self.guard_mode = False
-                self.navigating = False
-                self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
-                self.get_logger().info(Ausgabe_Befehlsliste)
-                self.get_logger().info(Ausagbe_Navigationsbefehle)
-            else:
-                self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
-                self.get_logger().info(Ausgabe_Befehlsliste)
-                self.get_logger().info(Ausagbe_Navigationsbefehle)
+            self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
+            self.get_logger().info(Ausgabe_Befehlsliste)
+            self.get_logger().info(Ausagbe_Navigationsbefehle)
         else:
             return
         self.pub.publish(self.twist)        # Publishen des Befehls
@@ -252,13 +234,10 @@ class VoiceControlNode(Node):
             self.Hindernisserkennung = Hinderniserkennung.back
         elif min_distance_front <= Abstand:
             self.Hindernisserkennung = Hinderniserkennung.front
-            if self.guard_mode:
-                self.navigator.cancelTask()
         else:
             if self.Hindernisserkennung != Hinderniserkennung.none:         # Umschalten auf Normalzustand
                 self.get_logger().info("\n\nKein Hindernis mehr im Weg\n")
                 self.get_logger().info(Ausgabe_Befehlsliste)
-                self.get_logger().info(Ausagbe_Navigationsbefehle)
                 self.Hindernisserkennung = Hinderniserkennung.none
                 self.DirectionState = DirectionState.none
                 stopTwist = Twist()
@@ -287,47 +266,7 @@ class VoiceControlNode(Node):
                 self.get_logger().info("\n\nVorwärts fahren bis kein Hindernis mehr im Weg\n")
                 self.obstacle_handling_active = True
 
-    # Guard Mode Handhabung
-    def handle_guard_mode(self):
-
-            # Zwei Punkte zur alternierenden Navigation
-            Punkt_A =  ("start", self.waypoints_list["start"], self.orientation_list["start"])
-            Punkt_B =  ("stellplatz", self.waypoints_list["stellplatz"], self.orientation_list["stellplatz"])
-            
-            Ziel = Punkt_A
-
-            try:
-                    while self.navigating and self.guard_mode:  # Solange der Wächtermodus aktiv ist
-                        name, (x, y), yaw = Ziel
-                        self.get_logger().info(f"🔁 Navigiere zu: {name}")
-                        self.obstacle_check_active = True
-                        threading.Thread(target=self.guard_obstacle_check, daemon=True).start()
-                        self.navigate_to_pose(x, y, yaw)
-                        Ziel = Punkt_B if Ziel == Punkt_A else Punkt_A
-                        time.sleep(1.0)  
-
-            except KeyboardInterrupt:
-                self.guard_mode = False
-                self.obstacle_check_active = False
-    
-    # Eindringlingserkennung während des Guard Mode
-    def guard_obstacle_check(self):
-        last_detected = False
-        while self.obstacle_check_active and self.guard_mode:
-            obstacle = self.Hindernisserkennung != self.Hindernisserkennung.none
-            if obstacle and not last_detected:
-                self.get_logger().warn("Eindringling erkannt !!!")
-                self.guard_mode = False     # Wächtermodus beenden
-
-                start_time = time.time()    # Alarmsignal ausgeben für 60 s
-                while time.time() - start_time < 60:
-                    self.play_sound(3)
-                    time.sleep(1) 
-            last_detected = obstacle
-            
-
-        
-    # Funktion zur Zielübergabe an NavigateToPose
+    # Funktion zur Zielnavigation
     def navigate_to_pose(self, x, y, yaw_rad):
   
         q = self.euler_to_quaternion(0, 0, yaw_rad)
@@ -347,8 +286,8 @@ class VoiceControlNode(Node):
         while not self.navigator.isTaskComplete() and self.navigating == True:
                 time.sleep(0.1)
 
-        result = self.navigator.getResult()            
-            
+        if self.navigating:             
+            result = self.navigator.getResult() 
         if result == TaskResult.SUCCEEDED:
                 self.get_logger().info("✅ Ziel erfolgreich erreicht.")
                 self.play_sound(1)
@@ -359,12 +298,13 @@ class VoiceControlNode(Node):
                 self.get_logger().warn("⚠️ Navigation wurde abgebrochen.")
 
         self.navigator.cancelTask()
-        if not self.guard_mode:
-            self.navigating = False
+        self.navigating = False
         self.get_logger().info("\n-----Warte auf neuen Sprachbefehl-----\n")
         self.get_logger().info(Ausgabe_Befehlsliste)
         self.get_logger().info(Ausagbe_Navigationsbefehle)
-          
+        
+
+        
     def euler_to_quaternion(self, roll: float, pitch: float, yaw: float) -> Quaternion:
         qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - \
              math.cos(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
@@ -381,4 +321,3 @@ class VoiceControlNode(Node):
         quat.z = qz
         quat.w = qw
         return quat
-
