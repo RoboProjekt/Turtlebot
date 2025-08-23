@@ -315,11 +315,11 @@ class VoiceControlNode(Node):
         qx = math.sin(roll / 2) * math.cos(pitch / 2) * math.cos(yaw / 2) - \
              math.cos(roll / 2) * math.sin(pitch / 2) * math.sin(yaw / 2)
         
-
         quat = Quaternion()
         quat.x = qx
         quat.y = qy
         quat.z = qz
         quat.w = qw
         return quat
+
 
