@@ -81,7 +81,7 @@ class YoloDetector(Node):
            # "flur": (1.25, 3.9),
              "eingang vorne": (18.5, 1.72, 4.71),
              "eingang mitte": (6.05, 1.77, 4.71),
-             #"eingang hinten": (-1.7, 1.57, 4.71),
+             "eingang hinten": (-1.7, 1.57, 4.71),
              "stellplatz": (4.2, 1.07, 3.14),
              "start": (0.0, 0.0, 0.00),
              "flur anfang": (18.55, 3.62, 3.14),
@@ -106,17 +106,10 @@ class YoloDetector(Node):
         self.working = False    #Wird gerade ein Befehl ausgeführt? Wenn ja, dann kein neues Kommando, muss erst bei Abschließen der Funktion wieder Freigegeben werden 
                                 #(tracking zurück bei startpunkt, navigation bei position angekommen oder abgebrochen)
 
-        # Hinderniserkennung
-        self.obstacle_detected = False                  # Zur erkennung ob Hindernis erkannt wurde
-        self.obstacle_handling_active = False           # Hinderniserkennungs Handling Status
-
-        #NEU EINGEFÜGT
         self.cmd_queue = queue.Queue()
-        # Start input thread (liest stdin nur hier)
-        self.console_lock = threading.Lock()
+
         threading.Thread(target=self.input_loop, daemon=True).start()
         threading.Thread(target=self.navigate_to_pose, daemon=True).start()
-        ###############
 
 
     def __del__(self):
@@ -139,7 +132,6 @@ class YoloDetector(Node):
                 break
     
 
-    #NEU EINGEFÜGT
     def timer_callback(self):
         #self._input_loop()
         # Wenn bereits in Navigation/Tracking: nichts neues starten
@@ -170,7 +162,6 @@ class YoloDetector(Node):
                     self.get_logger().info(f"navigating und working auf false nach nav2pose")
             else:
                 self.get_logger().warn(f"Ungültiger Befehl: {cmd}")
-    ####################
 
 
     def play_sound(self, sound_value=2):
@@ -179,7 +170,6 @@ class YoloDetector(Node):
         future = self.sound_client.call_async(request)
 
 
-    #NEU EINGEFÜGT
     def output_commands(self):
         now = time.time()
         # last menu print timestamp (erstellt bei Bedarf)
@@ -261,20 +251,21 @@ class YoloDetector(Node):
             else:
                 abs_idx, raw_r = min(valid, key=lambda x: x[1])
                 results[name] = raw_r
-        # Wenn du exakt das ursprüngliche Verhalten behalten willst (Abbruch, falls irgendeine Seite fehlt),
-        # dann kannst du wie vorher returnen. Ich empfehle stattdessen, nur zu returnen wenn *alle* Seiten fehlen.
-        # Hier verhalte ich mich wie ursprünglich: abbrechen wenn eine Seite keine gültigen Messungen hat.
-        if (not np.isfinite(results["front"])) or (not np.isfinite(results["back"])) or \
-        (not np.isfinite(results["left"])) or (not np.isfinite(results["right"])):
-            # Optional: logge welche Seite fehlt
-            missing = [k for k, v in results.items() if not np.isfinite(v)]
-            self.get_logger().debug(f"Scan window missing for sides: {missing}")
+
+        missing = [k for k, v in results.items() if not np.isfinite(v)]
+        if len(missing) == 4:
+            self.get_logger().debug(f"Alle Scan-Fenster fehlen: {missing}")
             return
-        # Setze die minimalen Distanzen (wie vorher)
-        self.min_distance_front = results["front"]
-        self.min_distance_back = results["back"]
-        self.min_distance_left = results["left"]
-        self.min_distance_right = results["right"]
+
+        # nur gültige Werte aktualisieren (belasse vorherigen Wert, falls ungültig)
+        if np.isfinite(results["front"]):
+            self.min_distance_front = results["front"]
+        if np.isfinite(results["back"]):
+            self.min_distance_back = results["back"]
+        if np.isfinite(results["left"]):
+            self.min_distance_left = results["left"]
+        if np.isfinite(results["right"]):
+            self.min_distance_right = results["right"]
 
 
     #Immer wenn amcl eine Pose veröffentlicht wird die neue Position als aktuelle Roboterposition weggespeichert
@@ -291,23 +282,22 @@ class YoloDetector(Node):
 
     #NEW BLOCK FOR YOLO INTEGRATION
     def yolo_callback(self, msg: String):
-        text = msg.data.lower()
-        #self.new_door = False
-        if "door" in text:
-            match = re.search(r"(\d+)%", text)
+        text = msg.data.lower() #Einlesen der Nachricht
+        if "door" in text:  #Wenn es sich um eine Tür handelt
+            match = re.search(r"(\d+)%", text)  #Sicherheit aus string bestimmen
             if match:
                 zahl = int(match.group(1))
-                if zahl > doorConf:
+                if zahl > doorConf:     #Wenn die Tür mit einer Sicherheit von 70% bestimmt wurde weiterverfahren
                     if not self.latest_scan:
                         return
-                    # Abstand inkl. Sicherheit abziehen
-                    #raw_dist = self._get_front_distance(self.latest_scan)
-                    raw_dist = self.min_distance_front
+                    raw_dist = self.min_distance_front  #Abstand zum nächsten Objekt
+                    #self.get_logger().info(f"Distanz ohne sicherheit: {raw_dist}")
                     dist = max(0.0, raw_dist - door_distance)  # Sicherheitsabstand abziehen
+                    #self.get_logger().info(f"Distanz mit sicherheit: {dist}")
                     if not np.isfinite(dist):
                         self.get_logger().info("\nTür zu weit entfernt\n")
                         return
-                    x,y = self._calc_global_position(dist)
+                    x,y = self._calc_global_position(dist)  #Koordinaten der Tür bestimmen
                     if x is None or y is None:  #x und y auf Gültigkeit überprüfen
                         return
                     # Prüfen, ob Position schon in waypoints existiert
@@ -315,23 +305,24 @@ class YoloDetector(Node):
                         if math.hypot(vx-x, vy-y) < Abstand:
                             self.get_logger().info(f"Tür bereits bekannt\n")
                             return  # bereits bekannt
-                    #self.new_door = True
                     # Neue Tür anlegen
-                    name = f"tür {len(self.waypoints)+1}"
-                    yaw = self._get_current_yaw()
-                    self.waypoints[name] = (x,y,yaw)
-                    self.get_logger().info(f"\nRoboter Position: {self.current_pose}")
-                    self.get_logger().info(f"Neue Tür erkannt: {name} at ({x:.2f},{y:.2f})\n")
+                    name = f"tür {len(self.waypoints)+1}"   #Name zuweisen
+                    yaw = self._get_current_yaw()   #Momentane Roboter Orientierung für die Tür Koordinaten verwenden
+                    self.waypoints[name] = (x,y,yaw)    #Neuen eintrag in das dictionary Einfügen
+                    self.get_logger().info(f"Roboter Position: {self.current_pose}")  #Debugging Info: Momentane Roboter Position
+                    self.get_logger().info(f"Gemessene Distanzen: raw: {raw_dist} mit Sicherheit: {dist}")
+                    self.get_logger().info(f"Neue Tür erkannt: {name} at ({x:.2f},{y:.2f})\n")  #Debugging Info: Berechnete Tür Position
         
 
     #Bestimme die momentane Position der Tür in der Karte
     def _calc_global_position(self, dist: float):
-        pose = self.current_pose #Bestimme die momentane Position des Roboters in der Karte
+        pose = self.current_pose #Beziehe die letzte bekannte Position der amcl_callback
         if pose is None:
             return None, None
         x0, y0, yaw = pose
         self.current_pose = pose
-        return x0 + dist * math.cos(yaw), y0 + dist * math.sin(yaw) #Berechne Position der Tür in abhängigkeit von minimaler Distanz nach vorne
+        return x0 + dist * math.cos(yaw), y0 + dist * math.sin(yaw) #Berechne Koordinaten der Tür in abhängigkeit der 
+                                                                    #nach vorne gemessenen kleinsten Distanz
 
 
     #Bestimme momentane Orientierung im Raum bzw. in der Karte
