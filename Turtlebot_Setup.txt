@@ -1,10 +1,4 @@
 		ANLEITUNG ZUM ERSTELLEN VON ROS AUF EINEM TURTLEBOT3 (RASPBERRY PI3)
-		
-		
-	
-	Git Anmeldedaten: 	E-Mail: baau1001@stud.hs-kl.de
-				PW: Mechatronischesprojekt_2025
-				Username: RoboProjekt
 				
 	    GIT NUTZUNG
     -Änderungen aus git laden: cd ~/Pfad/zu/Ordner (cd ~/Schreibtisch/Turtlebot)
@@ -805,3 +799,4 @@ echo
 	
 	
 	
+
